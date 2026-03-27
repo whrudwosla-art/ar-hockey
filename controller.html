@@ -1,283 +1,356 @@
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
-<title>AR Hockey – Phone Controller (Camera Tracker)</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ICE DASH — 퍽 추적기</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 16px; background:#0f172a; color:#e2e8f0; }
-  .card { background:#111827; border-radius: 12px; padding: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.25);}
-  button { padding: 10px 14px; border-radius: 10px; border:0; background:#10b981; color:white; font-weight:600; }
-  button.secondary { background:#2563eb; }
-  textarea { width:100%; box-sizing:border-box; }
-  video, canvas { width: 100%; border-radius: 12px; background:#000; }
-  .row { display:grid; gap:8px; }
-  label { font-size:12px; opacity:.9;}
-  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-  .warn { background:#7c2d12; color:#fff; padding:10px; border-radius:8px; margin:8px 0; line-height:1.4; }
-  .tip { font-size:12px; opacity:.85; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --accent: #00ccff;
+    --bg: #08192e;
+    --card: #0e2540;
+    --font-title: 'Bebas Neue', cursive;
+    --font-body: 'Noto Sans KR', sans-serif;
+  }
+  body {
+    background: var(--bg);
+    color: white;
+    font-family: var(--font-body);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 16px;
+    gap: 12px;
+  }
+  h1 {
+    font-family: var(--font-title);
+    font-size: 28px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-shadow: 0 0 14px rgba(0,204,255,0.5);
+    margin-top: 8px;
+  }
+  #status-bar {
+    width: 100%;
+    max-width: 400px;
+    background: var(--card);
+    border-radius: 12px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+  }
+  #status-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #ff4444;
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  #status-dot.connected { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
+  #status-dot.tracking  { background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 0.8s infinite alternate; }
+  @keyframes pulse { from { opacity: 1; } to { opacity: 0.4; } }
+  #status-text { flex: 1; color: #99bbcc; }
+
+  #canvas-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 2px solid #1a3a5c;
+    background: #000;
+  }
+  #videoEl { width: 100%; display: block; transform: scaleX(-1); }
+  #overlayCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transform: scaleX(-1);
+  }
+
+  #controls {
+    width: 100%;
+    max-width: 400px;
+    background: var(--card);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .ctrl-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: #99bbcc;
+  }
+  .ctrl-row label { min-width: 90px; }
+  input[type=range] { flex: 1; accent-color: var(--accent); }
+  .val { min-width: 32px; text-align: right; color: white; font-weight: 700; }
+
+  #code-section {
+    width: 100%;
+    max-width: 400px;
+    background: var(--card);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: #99bbcc;
+    line-height: 1.7;
+  }
+  #room-code {
+    font-family: var(--font-title);
+    font-size: 36px;
+    letter-spacing: 8px;
+    color: var(--accent);
+    text-align: center;
+    margin: 8px 0 4px;
+  }
+  .hint { font-size: 12px; color: #445566; text-align: center; }
+
+  #start-btn {
+    font-family: var(--font-title);
+    font-size: 22px;
+    letter-spacing: 3px;
+    color: #08192e;
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    width: 100%;
+    max-width: 400px;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(0,204,255,0.4);
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  #start-btn:active { transform: scale(0.97); }
+
+  #debug-info {
+    font-size: 12px;
+    color: #334455;
+    text-align: center;
+  }
+
+  .section-title {
+    font-family: var(--font-title);
+    font-size: 14px;
+    letter-spacing: 2px;
+    color: #4488aa;
+    margin-bottom: 4px;
+  }
 </style>
 </head>
 <body>
-<h1>AR Hockey – Phone Controller</h1>
 
-<div id="secureWarn" class="warn" style="display:none;">
-  이 페이지는 <b>보안 컨텍스트가 아닙니다</b>. Android/iOS에서는 <b>file:// 또는 일반 HTTP</b>에서 카메라가 차단됩니다.<br/>
-  <b>권장:</b> 이 파일을 폰에서 <b>로컬 웹서버(HTTP)</b>로 열어 <code>http://localhost:포트/controller.html</code> 으로 접속하세요.<br/>
-  (빠른 방법: 안드로이드의 간단한 웹서버 앱 또는 Termux에서 <code>python -m http.server 8000</code> 실행 후, 브라우저에서 <code>http://localhost:8000/controller.html</code>)<br/>
-  그래도 지금은 아래 <b>슬라이더 시뮬레이터</b>로 연결 테스트는 할 수 있습니다.
+<h1>🏒 퍽 추적기</h1>
+
+<div id="status-bar">
+  <div id="status-dot"></div>
+  <div id="status-text">카메라 시작 버튼을 눌러주세요</div>
 </div>
 
-<div class="card">
-  <div class="row">
-    <div class="row">
-      <label>카메라 선택</label>
-      <select id="camSelect"></select>
-    </div>
-    <button id="btnCam">1) 카메라 시작</button>
-    <div class="row">
-      <label>분석 해상도: 160×120 (성능/지연 최적)</label>
-      <label>팁: 드리블판은 밝게, 퍽은 어둡게 보이도록 조명을 맞춰주세요.</label>
-    </div>
-    <video id="video" playsinline muted></video>
-    <canvas id="viz" width="320" height="240"></canvas>
-    <div class="row">
-      <label>어두움 임계값 (0=모든 픽셀, 255=거의 없음): <span id="thrVal">70</span></label>
-      <input type="range" id="thr" min="10" max="180" step="1" value="70"/>
-      <label>좌우 ROI 컷 L:<span id="roiLVal">5</span>% R:<span id="roiRVal">5</span>%</label>
-      <input type="range" id="roiL" min="0" max="20" step="1" value="5"/>
-      <input type="range" id="roiR" min="0" max="20" step="1" value="5"/>
-      <label>EMA α(보내기 전 스무딩): <span id="alphaVal">0.25</span></label>
-      <input type="range" id="alpha" min="0.05" max="0.8" step="0.01" value="0.25"/>
-    </div>
+<div id="canvas-wrap">
+  <video id="videoEl" autoplay playsinline muted></video>
+  <canvas id="overlayCanvas"></canvas>
+</div>
+
+<div id="controls">
+  <div class="section-title">퍽 감지 설정</div>
+  <div class="ctrl-row">
+    <label>어두움 한계</label>
+    <input type="range" id="darkThresh" min="20" max="120" value="60">
+    <span class="val" id="darkVal">60</span>
+  </div>
+  <div class="ctrl-row">
+    <label>최소 크기</label>
+    <input type="range" id="minSize" min="100" max="3000" step="100" value="400">
+    <span class="val" id="sizeVal">400</span>
+  </div>
+  <div class="ctrl-row">
+    <label>감도</label>
+    <input type="range" id="smoothing" min="1" max="10" value="5">
+    <span class="val" id="smoothVal">5</span>
   </div>
 </div>
 
-<div class="card">
-  <h3>2) WebRTC 연결</h3>
-  <div class="row">
-    <label>PC Offer 붙여넣기</label>
-    <textarea id="pcOffer" rows="6" class="mono" placeholder="PC의 Offer(JSON)를 여기에 붙여넣기"></textarea>
-    <button id="btnAnswer" class="secondary">Answer 생성</button>
-    <label>생성된 Answer (복사하여 PC에 붙여넣기)</label>
-    <textarea id="phoneAnswer" rows="6" class="mono" readonly></textarea>
-    <div>상태: <span id="status">대기</span></div>
-    <div class="mono" id="debug"></div>
-  </div>
+<div id="code-section">
+  <div class="section-title">연결 코드 (게임 화면에 입력)</div>
+  <div id="room-code">----</div>
+  <div class="hint">같은 와이파이에서 BroadcastChannel로 연결됩니다<br>다른 네트워크라면 게임 화면에서 수동 코드 입력</div>
 </div>
 
-<div class="card">
-  <h3>3) 카메라 없이 테스트(시뮬레이터)</h3>
-  <div class="row">
-    <label>X 값(−1…+1) : <span id="simVal">0.00</span></label>
-    <input type="range" id="simX" min="-1" max="1" step="0.01" value="0"/>
-    <div class="tip">연결이 되어 있으면 이 슬라이더를 움직일 때 PC 게임에서 패들이 좌우로 움직입니다.</div>
-  </div>
-</div>
+<button id="start-btn" onclick="startCamera()">📷 카메라 시작</button>
+
+<div id="debug-info">퍽 X: — &nbsp;|&nbsp; Y: — &nbsp;|&nbsp; 픽셀: —</div>
 
 <script>
-const video = document.getElementById('video');
-const viz = document.getElementById('viz');
-const vctx = viz.getContext('2d', { willReadFrequently: true });
+const video = document.getElementById('videoEl');
+const overlay = document.getElementById('overlayCanvas');
+const octx = overlay.getContext('2d');
+const statusDot = document.getElementById('status-dot');
+const statusText = document.getElementById('status-text');
+const debugInfo = document.getElementById('debug-info');
 
-const btnCam = document.getElementById('btnCam');
-const thr = document.getElementById('thr');
-const thrVal = document.getElementById('thrVal');
-const roiL = document.getElementById('roiL');
-const roiR = document.getElementById('roiR');
-const roiLVal = document.getElementById('roiLVal');
-const roiRVal = document.getElementById('roiRVal');
-const alphaSlider = document.getElementById('alpha');
-const alphaVal = document.getElementById('alphaVal');
+// Generate room code
+const roomCode = Math.random().toString(36).substr(2, 4).toUpperCase();
+document.getElementById('room-code').textContent = roomCode;
 
-thr.oninput = ()=> thrVal.textContent = thr.value;
-roiL.oninput = ()=> roiLVal.textContent = roiL.value;
-roiR.oninput = ()=> roiRVal.textContent = roiR.value;
-alphaSlider.oninput = ()=> alphaVal.textContent = parseFloat(alphaSlider.value).toFixed(2);
+// BroadcastChannel for same-device/same-browser communication
+let bc = null;
+try { bc = new BroadcastChannel('icedash_' + roomCode); } catch(e) {}
 
-// 보안 컨텍스트 경고
-const secureWarn = document.getElementById('secureWarn');
-if (!window.isSecureContext) {
-  secureWarn.style.display = 'block';
-}
+// Settings
+let darkThresh = 60, minSize = 400, smoothing = 5;
+let smoothX = 0.5, smoothY = 0.5;
 
-// 카메라 선택
-const camSelect = document.getElementById('camSelect');
-async function populateCameras() {
-  try {
-    const tmp = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-    tmp.getTracks().forEach(t => t.stop());
-  } catch (e) { /* 무시(권한 거부 시 라벨이 비어있을 수 있음) */ }
+document.getElementById('darkThresh').oninput = e => {
+  darkThresh = +e.target.value;
+  document.getElementById('darkVal').textContent = darkThresh;
+};
+document.getElementById('minSize').oninput = e => {
+  minSize = +e.target.value;
+  document.getElementById('sizeVal').textContent = minSize;
+};
+document.getElementById('smoothing').oninput = e => {
+  smoothing = +e.target.value;
+  document.getElementById('smoothVal').textContent = smoothing;
+};
 
-  const devices = await navigator.mediaDevices.enumerateDevices();
-  const cams = devices.filter(d => d.kind === 'videoinput');
-  camSelect.innerHTML = '';
-  cams.forEach((d, i) => {
-    const opt = document.createElement('option');
-    opt.value = d.deviceId;
-    opt.textContent = d.label || `camera ${i+1}`;
-    camSelect.appendChild(opt);
-  });
-  const back = cams.find(c => /back|rear|후면/i.test(c.label));
-  if (back) camSelect.value = back.deviceId;
-}
+// Hidden processing canvas
+const procCanvas = document.createElement('canvas');
+const pctx = procCanvas.getContext('2d', { willReadFrequently: true });
+const PROC_W = 160, PROC_H = 120;
+procCanvas.width = PROC_W;
+procCanvas.height = PROC_H;
 
-// 분석/전송
-let analysisW = 160, analysisH = 120; // 저해상도 분석
-let sendAlpha = parseFloat(alphaSlider.value);
-let xSmooth = 0;
-
-btnCam.addEventListener('click', startCamera);
+let running = false;
+let lastX = null, lastY = null;
 
 async function startCamera() {
   try {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      throw new Error('이 브라우저/컨텍스트에서는 카메라 API를 사용할 수 없습니다.');
-    }
-    if (!camSelect.options.length) await populateCameras();
-
-    const constraints = camSelect.value ? {
-      video: { deviceId: { exact: camSelect.value }, frameRate: { ideal: 60, max: 60 } },
-      audio: false
-    } : {
-      video: { facingMode: { ideal: 'environment' }, frameRate: { ideal: 60, max: 60 } },
-      audio: false
-    };
-
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
+    });
     video.srcObject = stream;
     await video.play();
-    startAnalyze();
-  } catch (e) {
-    alert(
-      '카메라 접근 실패: ' + e.message +
-      '\n\n해결 체크리스트:' +
-      '\n1) 이 페이지가 HTTPS 또는 http://localhost 인지 확인' +
-      '\n2) 브라우저 사이트 권한에서 카메라 허용' +
-      '\n3) 다른 앱이 카메라 사용 중인지(종료)' +
-      '\n4) 상단 드롭다운에서 다른 카메라 선택'
-    );
+
+    overlay.width = video.videoWidth || 640;
+    overlay.height = video.videoHeight || 480;
+
+    statusDot.className = 'connected';
+    statusText.textContent = '카메라 연결됨 — 퍽을 화면에 비춰주세요';
+    document.getElementById('start-btn').textContent = '✅ 추적 중...';
+    document.getElementById('start-btn').style.background = '#00aa66';
+    running = true;
+    requestAnimationFrame(trackLoop);
+  } catch(err) {
+    statusText.textContent = '카메라 접근 실패: ' + err.message;
+    statusDot.style.background = '#ff4444';
   }
 }
 
-function startAnalyze() {
-  const off = document.createElement('canvas');
-  const octx = off.getContext('2d', { willReadFrequently: true });
+function trackLoop() {
+  if (!running) return;
+  if (video.readyState < 2) { requestAnimationFrame(trackLoop); return; }
 
-  const loop = () => {
-    if (video.readyState >= 2) {
-      // 다운샘플
-      off.width = analysisW; off.height = analysisH;
-      octx.drawImage(video, 0, 0, analysisW, analysisH);
-      const img = octx.getImageData(0, 0, analysisW, analysisH);
-      const data = img.data;
+  // Draw video to small processing canvas (mirrored to match display)
+  pctx.save();
+  pctx.translate(PROC_W, 0);
+  pctx.scale(-1, 1);
+  pctx.drawImage(video, 0, 0, PROC_W, PROC_H);
+  pctx.restore();
 
-      const cutL = Math.floor(analysisW * (parseInt(roiL.value)/100));
-      const cutR = Math.floor(analysisW * (parseInt(roiR.value)/100));
-      const xMin = cutL;
-      const xMax = analysisW - 1 - cutR;
+  const imageData = pctx.getImageData(0, 0, PROC_W, PROC_H);
+  const data = imageData.data;
 
-      const T = parseInt(thr.value); // 밝기 임계값
-      // 어두울수록 큰 가중치 w = max(0, T - Y)
-      let sumW = 0, sumWX = 0;
-      for (let y=0; y<analysisH; y++) {
-        for (let x=xMin; x<=xMax; x++) {
-          const idx = (y*analysisW + x)*4;
-          const r = data[idx], g = data[idx+1], b = data[idx+2];
-          const Y = 0.2126*r + 0.7152*g + 0.0722*b;
-          const w = Math.max(0, T - Y);
-          if (w > 0) { sumW += w; sumWX += w * x; }
-        }
+  // Find dark pixels (puck)
+  let sumX = 0, sumY = 0, count = 0;
+  for (let y = 0; y < PROC_H; y++) {
+    for (let x = 0; x < PROC_W; x++) {
+      const i = (y * PROC_W + x) * 4;
+      const r = data[i], g = data[i+1], b = data[i+2];
+      const brightness = (r + g + b) / 3;
+      const saturation = Math.max(r, g, b) - Math.min(r, g, b);
+      // Dark AND not too colorful (to avoid colored objects)
+      if (brightness < darkThresh && saturation < 40) {
+        sumX += x; sumY += y; count++;
       }
-      let xNorm = 0;
-      let hasBlob = false;
-      if (sumW > 1e-3) {
-        const cx = sumWX / sumW;
-        const clamped = Math.max(xMin, Math.min(xMax, cx));
-        xNorm = ((clamped - xMin) / (xMax - xMin)) * 2 - 1; // [-1,1]
-        hasBlob = true;
-      }
-      // EMA 스무딩
-      sendAlpha = parseFloat(alphaSlider.value);
-      xSmooth = hasBlob ? (sendAlpha * xNorm + (1 - sendAlpha) * xSmooth) : xSmooth;
-
-      // 시각화
-      vctx.drawImage(video, 0, 0, viz.width, viz.height);
-      vctx.strokeStyle = '#22d3ee'; vctx.lineWidth = 2;
-      const scaleX = viz.width / analysisW;
-      const rx = xMin * scaleX;
-      const rw = (xMax - xMin) * scaleX;
-      vctx.strokeRect(rx, 0, rw, viz.height);
-      if (hasBlob) {
-        const cxViz = ((xSmooth + 1)/2) * rw + rx;
-        vctx.fillStyle = '#f59e0b';
-        vctx.beginPath();
-        vctx.arc(cxViz, viz.height*0.75, 10, 0, Math.PI*2);
-        vctx.fill();
-      }
-
-      // 전송
-      sendX(xSmooth);
     }
-    requestAnimationFrame(loop);
-  };
-  loop();
-}
-
-// WebRTC
-const pcOfferEl = document.getElementById('pcOffer');
-const phoneAnswerEl = document.getElementById('phoneAnswer');
-const btnAnswer = document.getElementById('btnAnswer');
-const statusEl = document.getElementById('status');
-const debugEl = document.getElementById('debug');
-
-let pc, dc;
-btnAnswer.onclick = async () => {
-  try {
-    const offer = JSON.parse(pcOfferEl.value.trim());
-    pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-    });
-    pc.ondatachannel = (ev) => {
-      if (ev.channel.label === 'x') {
-        dc = ev.channel;
-        dc.onopen = ()=> statusEl.textContent = '데이터채널 OPEN';
-        dc.onclose = ()=> statusEl.textContent = '데이터채널 CLOSED';
-      }
-    };
-    pc.onconnectionstatechange = () => {
-      statusEl.textContent = '연결 상태: ' + pc.connectionState;
-    };
-    await pc.setRemoteDescription(offer);
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    pc.onicecandidate = (e) => {
-      if (!e.candidate) {
-        phoneAnswerEl.value = JSON.stringify(pc.localDescription);
-      }
-    };
-  } catch (e) {
-    alert('Offer 파싱 실패: ' + e.message);
   }
-};
 
-function sendX(x) {
-  if (dc && dc.readyState === 'open') {
-    const payload = `x:${Number(x).toFixed(4)},ts:${Date.now()}`;
-    dc.send(payload);
-    debugEl.textContent = payload;
+  const OW = overlay.width, OH = overlay.height;
+  octx.clearRect(0, 0, OW, OH);
+
+  if (count > minSize) {
+    const rawX = (sumX / count) / PROC_W;
+    const rawY = (sumY / count) / PROC_H;
+
+    const alpha = smoothing / 20;
+    smoothX = smoothX * (1 - alpha) + rawX * alpha;
+    smoothY = smoothY * (1 - alpha) + rawY * alpha;
+
+    // Draw detection overlay
+    const px = smoothX * OW;
+    const py = smoothY * OH;
+
+    // Crosshair
+    octx.strokeStyle = 'rgba(0,255,136,0.9)';
+    octx.lineWidth = 2;
+    octx.beginPath();
+    octx.moveTo(px - 30, py); octx.lineTo(px + 30, py);
+    octx.moveTo(px, py - 30); octx.lineTo(px, py + 30);
+    octx.stroke();
+
+    // Circle
+    octx.strokeStyle = 'rgba(0,255,136,0.7)';
+    octx.lineWidth = 3;
+    octx.beginPath();
+    octx.arc(px, py, 24, 0, Math.PI * 2);
+    octx.stroke();
+
+    // Glow fill
+    const grd = octx.createRadialGradient(px, py, 0, px, py, 24);
+    grd.addColorStop(0, 'rgba(0,255,136,0.25)');
+    grd.addColorStop(1, 'rgba(0,255,136,0)');
+    octx.fillStyle = grd;
+    octx.beginPath();
+    octx.arc(px, py, 24, 0, Math.PI * 2);
+    octx.fill();
+
+    // Label
+    octx.fillStyle = 'rgba(0,255,136,0.9)';
+    octx.font = 'bold 12px sans-serif';
+    octx.fillText('퍽 감지됨', px + 28, py - 8);
+
+    // Send position
+    const payload = { x: smoothX, y: smoothY, room: roomCode, ts: Date.now() };
+    if (bc) bc.postMessage(payload);
+
+    // Also store in localStorage for cross-tab
+    try { localStorage.setItem('icedash_pos', JSON.stringify(payload)); } catch(e) {}
+
+    statusDot.className = 'tracking';
+    statusText.textContent = `퍽 추적 중 — X: ${(smoothX * 100).toFixed(0)}%`;
+    debugInfo.textContent = `퍽 X: ${(smoothX * 100).toFixed(1)}% | Y: ${(smoothY * 100).toFixed(1)}% | 픽셀: ${count}`;
+    lastX = smoothX; lastY = smoothY;
+  } else {
+    // No puck detected
+    statusDot.className = 'connected';
+    if (lastX !== null) {
+      statusText.textContent = '퍽을 찾는 중... 카메라를 퍽 위로';
+    }
+    debugInfo.textContent = `감지된 어두운 픽셀: ${count} (최소: ${minSize})`;
   }
-}
 
-// 시뮬레이터(카메라 없이도 테스트)
-const sim = document.getElementById('simX');
-const simVal = document.getElementById('simVal');
-sim.addEventListener('input', ()=>{
-  simVal.textContent = Number(sim.value).toFixed(2);
-  sendX(sim.value);
-});
+  requestAnimationFrame(trackLoop);
+}
 </script>
 </body>
 </html>
-``
