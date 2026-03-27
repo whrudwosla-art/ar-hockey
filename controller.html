@@ -1,0 +1,283 @@
+
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
+<title>AR Hockey – Phone Controller (Camera Tracker)</title>
+<style>
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 16px; background:#0f172a; color:#e2e8f0; }
+  .card { background:#111827; border-radius: 12px; padding: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.25);}
+  button { padding: 10px 14px; border-radius: 10px; border:0; background:#10b981; color:white; font-weight:600; }
+  button.secondary { background:#2563eb; }
+  textarea { width:100%; box-sizing:border-box; }
+  video, canvas { width: 100%; border-radius: 12px; background:#000; }
+  .row { display:grid; gap:8px; }
+  label { font-size:12px; opacity:.9;}
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .warn { background:#7c2d12; color:#fff; padding:10px; border-radius:8px; margin:8px 0; line-height:1.4; }
+  .tip { font-size:12px; opacity:.85; }
+</style>
+</head>
+<body>
+<h1>AR Hockey – Phone Controller</h1>
+
+<div id="secureWarn" class="warn" style="display:none;">
+  이 페이지는 <b>보안 컨텍스트가 아닙니다</b>. Android/iOS에서는 <b>file:// 또는 일반 HTTP</b>에서 카메라가 차단됩니다.<br/>
+  <b>권장:</b> 이 파일을 폰에서 <b>로컬 웹서버(HTTP)</b>로 열어 <code>http://localhost:포트/controller.html</code> 으로 접속하세요.<br/>
+  (빠른 방법: 안드로이드의 간단한 웹서버 앱 또는 Termux에서 <code>python -m http.server 8000</code> 실행 후, 브라우저에서 <code>http://localhost:8000/controller.html</code>)<br/>
+  그래도 지금은 아래 <b>슬라이더 시뮬레이터</b>로 연결 테스트는 할 수 있습니다.
+</div>
+
+<div class="card">
+  <div class="row">
+    <div class="row">
+      <label>카메라 선택</label>
+      <select id="camSelect"></select>
+    </div>
+    <button id="btnCam">1) 카메라 시작</button>
+    <div class="row">
+      <label>분석 해상도: 160×120 (성능/지연 최적)</label>
+      <label>팁: 드리블판은 밝게, 퍽은 어둡게 보이도록 조명을 맞춰주세요.</label>
+    </div>
+    <video id="video" playsinline muted></video>
+    <canvas id="viz" width="320" height="240"></canvas>
+    <div class="row">
+      <label>어두움 임계값 (0=모든 픽셀, 255=거의 없음): <span id="thrVal">70</span></label>
+      <input type="range" id="thr" min="10" max="180" step="1" value="70"/>
+      <label>좌우 ROI 컷 L:<span id="roiLVal">5</span>% R:<span id="roiRVal">5</span>%</label>
+      <input type="range" id="roiL" min="0" max="20" step="1" value="5"/>
+      <input type="range" id="roiR" min="0" max="20" step="1" value="5"/>
+      <label>EMA α(보내기 전 스무딩): <span id="alphaVal">0.25</span></label>
+      <input type="range" id="alpha" min="0.05" max="0.8" step="0.01" value="0.25"/>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>2) WebRTC 연결</h3>
+  <div class="row">
+    <label>PC Offer 붙여넣기</label>
+    <textarea id="pcOffer" rows="6" class="mono" placeholder="PC의 Offer(JSON)를 여기에 붙여넣기"></textarea>
+    <button id="btnAnswer" class="secondary">Answer 생성</button>
+    <label>생성된 Answer (복사하여 PC에 붙여넣기)</label>
+    <textarea id="phoneAnswer" rows="6" class="mono" readonly></textarea>
+    <div>상태: <span id="status">대기</span></div>
+    <div class="mono" id="debug"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>3) 카메라 없이 테스트(시뮬레이터)</h3>
+  <div class="row">
+    <label>X 값(−1…+1) : <span id="simVal">0.00</span></label>
+    <input type="range" id="simX" min="-1" max="1" step="0.01" value="0"/>
+    <div class="tip">연결이 되어 있으면 이 슬라이더를 움직일 때 PC 게임에서 패들이 좌우로 움직입니다.</div>
+  </div>
+</div>
+
+<script>
+const video = document.getElementById('video');
+const viz = document.getElementById('viz');
+const vctx = viz.getContext('2d', { willReadFrequently: true });
+
+const btnCam = document.getElementById('btnCam');
+const thr = document.getElementById('thr');
+const thrVal = document.getElementById('thrVal');
+const roiL = document.getElementById('roiL');
+const roiR = document.getElementById('roiR');
+const roiLVal = document.getElementById('roiLVal');
+const roiRVal = document.getElementById('roiRVal');
+const alphaSlider = document.getElementById('alpha');
+const alphaVal = document.getElementById('alphaVal');
+
+thr.oninput = ()=> thrVal.textContent = thr.value;
+roiL.oninput = ()=> roiLVal.textContent = roiL.value;
+roiR.oninput = ()=> roiRVal.textContent = roiR.value;
+alphaSlider.oninput = ()=> alphaVal.textContent = parseFloat(alphaSlider.value).toFixed(2);
+
+// 보안 컨텍스트 경고
+const secureWarn = document.getElementById('secureWarn');
+if (!window.isSecureContext) {
+  secureWarn.style.display = 'block';
+}
+
+// 카메라 선택
+const camSelect = document.getElementById('camSelect');
+async function populateCameras() {
+  try {
+    const tmp = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    tmp.getTracks().forEach(t => t.stop());
+  } catch (e) { /* 무시(권한 거부 시 라벨이 비어있을 수 있음) */ }
+
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const cams = devices.filter(d => d.kind === 'videoinput');
+  camSelect.innerHTML = '';
+  cams.forEach((d, i) => {
+    const opt = document.createElement('option');
+    opt.value = d.deviceId;
+    opt.textContent = d.label || `camera ${i+1}`;
+    camSelect.appendChild(opt);
+  });
+  const back = cams.find(c => /back|rear|후면/i.test(c.label));
+  if (back) camSelect.value = back.deviceId;
+}
+
+// 분석/전송
+let analysisW = 160, analysisH = 120; // 저해상도 분석
+let sendAlpha = parseFloat(alphaSlider.value);
+let xSmooth = 0;
+
+btnCam.addEventListener('click', startCamera);
+
+async function startCamera() {
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('이 브라우저/컨텍스트에서는 카메라 API를 사용할 수 없습니다.');
+    }
+    if (!camSelect.options.length) await populateCameras();
+
+    const constraints = camSelect.value ? {
+      video: { deviceId: { exact: camSelect.value }, frameRate: { ideal: 60, max: 60 } },
+      audio: false
+    } : {
+      video: { facingMode: { ideal: 'environment' }, frameRate: { ideal: 60, max: 60 } },
+      audio: false
+    };
+
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = stream;
+    await video.play();
+    startAnalyze();
+  } catch (e) {
+    alert(
+      '카메라 접근 실패: ' + e.message +
+      '\n\n해결 체크리스트:' +
+      '\n1) 이 페이지가 HTTPS 또는 http://localhost 인지 확인' +
+      '\n2) 브라우저 사이트 권한에서 카메라 허용' +
+      '\n3) 다른 앱이 카메라 사용 중인지(종료)' +
+      '\n4) 상단 드롭다운에서 다른 카메라 선택'
+    );
+  }
+}
+
+function startAnalyze() {
+  const off = document.createElement('canvas');
+  const octx = off.getContext('2d', { willReadFrequently: true });
+
+  const loop = () => {
+    if (video.readyState >= 2) {
+      // 다운샘플
+      off.width = analysisW; off.height = analysisH;
+      octx.drawImage(video, 0, 0, analysisW, analysisH);
+      const img = octx.getImageData(0, 0, analysisW, analysisH);
+      const data = img.data;
+
+      const cutL = Math.floor(analysisW * (parseInt(roiL.value)/100));
+      const cutR = Math.floor(analysisW * (parseInt(roiR.value)/100));
+      const xMin = cutL;
+      const xMax = analysisW - 1 - cutR;
+
+      const T = parseInt(thr.value); // 밝기 임계값
+      // 어두울수록 큰 가중치 w = max(0, T - Y)
+      let sumW = 0, sumWX = 0;
+      for (let y=0; y<analysisH; y++) {
+        for (let x=xMin; x<=xMax; x++) {
+          const idx = (y*analysisW + x)*4;
+          const r = data[idx], g = data[idx+1], b = data[idx+2];
+          const Y = 0.2126*r + 0.7152*g + 0.0722*b;
+          const w = Math.max(0, T - Y);
+          if (w > 0) { sumW += w; sumWX += w * x; }
+        }
+      }
+      let xNorm = 0;
+      let hasBlob = false;
+      if (sumW > 1e-3) {
+        const cx = sumWX / sumW;
+        const clamped = Math.max(xMin, Math.min(xMax, cx));
+        xNorm = ((clamped - xMin) / (xMax - xMin)) * 2 - 1; // [-1,1]
+        hasBlob = true;
+      }
+      // EMA 스무딩
+      sendAlpha = parseFloat(alphaSlider.value);
+      xSmooth = hasBlob ? (sendAlpha * xNorm + (1 - sendAlpha) * xSmooth) : xSmooth;
+
+      // 시각화
+      vctx.drawImage(video, 0, 0, viz.width, viz.height);
+      vctx.strokeStyle = '#22d3ee'; vctx.lineWidth = 2;
+      const scaleX = viz.width / analysisW;
+      const rx = xMin * scaleX;
+      const rw = (xMax - xMin) * scaleX;
+      vctx.strokeRect(rx, 0, rw, viz.height);
+      if (hasBlob) {
+        const cxViz = ((xSmooth + 1)/2) * rw + rx;
+        vctx.fillStyle = '#f59e0b';
+        vctx.beginPath();
+        vctx.arc(cxViz, viz.height*0.75, 10, 0, Math.PI*2);
+        vctx.fill();
+      }
+
+      // 전송
+      sendX(xSmooth);
+    }
+    requestAnimationFrame(loop);
+  };
+  loop();
+}
+
+// WebRTC
+const pcOfferEl = document.getElementById('pcOffer');
+const phoneAnswerEl = document.getElementById('phoneAnswer');
+const btnAnswer = document.getElementById('btnAnswer');
+const statusEl = document.getElementById('status');
+const debugEl = document.getElementById('debug');
+
+let pc, dc;
+btnAnswer.onclick = async () => {
+  try {
+    const offer = JSON.parse(pcOfferEl.value.trim());
+    pc = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+    pc.ondatachannel = (ev) => {
+      if (ev.channel.label === 'x') {
+        dc = ev.channel;
+        dc.onopen = ()=> statusEl.textContent = '데이터채널 OPEN';
+        dc.onclose = ()=> statusEl.textContent = '데이터채널 CLOSED';
+      }
+    };
+    pc.onconnectionstatechange = () => {
+      statusEl.textContent = '연결 상태: ' + pc.connectionState;
+    };
+    await pc.setRemoteDescription(offer);
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    pc.onicecandidate = (e) => {
+      if (!e.candidate) {
+        phoneAnswerEl.value = JSON.stringify(pc.localDescription);
+      }
+    };
+  } catch (e) {
+    alert('Offer 파싱 실패: ' + e.message);
+  }
+};
+
+function sendX(x) {
+  if (dc && dc.readyState === 'open') {
+    const payload = `x:${Number(x).toFixed(4)},ts:${Date.now()}`;
+    dc.send(payload);
+    debugEl.textContent = payload;
+  }
+}
+
+// 시뮬레이터(카메라 없이도 테스트)
+const sim = document.getElementById('simX');
+const simVal = document.getElementById('simVal');
+sim.addEventListener('input', ()=>{
+  simVal.textContent = Number(sim.value).toFixed(2);
+  sendX(sim.value);
+});
+</script>
+</body>
+</html>
+``
