@@ -2,149 +2,85 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ICE DASH — 퍽 추적기</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --accent: #00ccff;
-    --bg: #08192e;
-    --card: #0e2540;
-    --font-title: 'Bebas Neue', cursive;
-    --font-body: 'Noto Sans KR', sans-serif;
-  }
   body {
-    background: var(--bg);
-    color: white;
-    font-family: var(--font-body);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 100vh;
-    padding: 16px;
-    gap: 12px;
+    background: #08192e; color: white;
+    font-family: 'Helvetica Neue', sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100vh; padding: 12px; gap: 10px;
   }
-  h1 {
-    font-family: var(--font-title);
-    font-size: 28px;
-    letter-spacing: 4px;
-    color: var(--accent);
-    text-shadow: 0 0 14px rgba(0,204,255,0.5);
-    margin-top: 8px;
-  }
+  h1 { font-size: 22px; letter-spacing: 3px; color: #00ccff; margin-top: 4px; font-weight: 800; }
+
   #status-bar {
-    width: 100%;
-    max-width: 400px;
-    background: var(--card);
-    border-radius: 12px;
-    padding: 10px 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 14px;
+    width: 100%; max-width: 420px; background: #0e2540;
+    border-radius: 12px; padding: 10px 16px;
+    display: flex; align-items: center; gap: 10px; font-size: 13px;
   }
-  #status-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    background: #ff4444;
-    flex-shrink: 0;
-    transition: background 0.3s;
-  }
-  #status-dot.connected { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
-  #status-dot.tracking  { background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 0.8s infinite alternate; }
-  @keyframes pulse { from { opacity: 1; } to { opacity: 0.4; } }
-  #status-text { flex: 1; color: #99bbcc; }
+  #sdot { width: 11px; height: 11px; border-radius: 50%; background: #ff4444; flex-shrink: 0; transition: background 0.3s; }
+  #sdot.on   { background: #00ccff; box-shadow: 0 0 8px #00ccff; animation: blink 0.7s infinite alternate; }
+  #sdot.found{ background: #00ff88; box-shadow: 0 0 10px #00ff88; }
+  @keyframes blink { to { opacity: 0.3; } }
+  #stxt { flex: 1; color: #99bbcc; font-size: 13px; }
 
   #canvas-wrap {
-    position: relative;
-    width: 100%;
-    max-width: 400px;
-    border-radius: 16px;
-    overflow: hidden;
-    border: 2px solid #1a3a5c;
-    background: #000;
+    position: relative; width: 100%; max-width: 420px;
+    border-radius: 14px; overflow: hidden; border: 2px solid #1a3a5c; background: #000;
   }
-  #videoEl { width: 100%; display: block; transform: scaleX(-1); }
-  #overlayCanvas {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    transform: scaleX(-1);
+  #vid { width: 100%; display: block; transform: scaleX(-1); }
+  #oc  { position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); pointer-events: none; }
+
+  #dbg-canvas {
+    width: 100%; max-width: 420px; border-radius: 10px;
+    border: 1px solid #1a3a5c; display: none; image-rendering: pixelated;
   }
+  #dbg-canvas.show { display: block; }
+
+  #conf-wrap { width: 100%; max-width: 420px; background: #0e2540; border-radius: 12px; padding: 12px 16px; }
+  .bar-label { font-size: 11px; color: #556677; margin-bottom: 6px; letter-spacing: 1px; text-transform: uppercase; }
+  #conf-bg { background: #0a1e36; border-radius: 6px; height: 12px; overflow: hidden; }
+  #conf-fill { height: 100%; width: 0%; background: #00ccff; border-radius: 6px; transition: width 0.08s, background 0.2s; }
 
   #controls {
-    width: 100%;
-    max-width: 400px;
-    background: var(--card);
-    border-radius: 12px;
-    padding: 14px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    width: 100%; max-width: 420px; background: #0e2540;
+    border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;
   }
-  .ctrl-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 13px;
-    color: #99bbcc;
-  }
-  .ctrl-row label { min-width: 90px; }
-  input[type=range] { flex: 1; accent-color: var(--accent); }
-  .val { min-width: 32px; text-align: right; color: white; font-weight: 700; }
+  .sec-title { font-size: 11px; letter-spacing: 2px; color: #445566; text-transform: uppercase; }
+  .ctrl-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #99bbcc; }
+  .ctrl-row label { min-width: 100px; }
+  input[type=range] { flex: 1; accent-color: #00ccff; }
+  .val { min-width: 40px; text-align: right; color: white; font-weight: 700; font-size: 13px; }
 
-  #code-section {
-    width: 100%;
-    max-width: 400px;
-    background: var(--card);
-    border-radius: 12px;
-    padding: 14px 16px;
-    font-size: 13px;
-    color: #99bbcc;
-    line-height: 1.7;
+  #fb-wrap {
+    width: 100%; max-width: 420px; background: #0e2540;
+    border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;
   }
-  #room-code {
-    font-family: var(--font-title);
-    font-size: 36px;
-    letter-spacing: 8px;
-    color: var(--accent);
-    text-align: center;
-    margin: 8px 0 4px;
+  #fb-url {
+    background: #071628; border: 1px solid #1a3a5c; color: #00ccff;
+    border-radius: 8px; padding: 8px 12px; font-size: 13px;
+    font-family: monospace; width: 100%;
   }
-  .hint { font-size: 12px; color: #445566; text-align: center; }
+  #fb-url::placeholder { color: #223344; }
+  #fb-url.ok { border-color: #00aa66; color: #00ff88; }
+  .fb-hint { font-size: 11px; color: #334455; }
+
+  #room-wrap { width: 100%; max-width: 420px; background: #0e2540; border-radius: 12px; padding: 12px 16px; text-align: center; }
+  #room-label { font-size: 11px; color: #334455; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  #room-code  { font-size: 38px; letter-spacing: 8px; color: #00ccff; font-weight: 900; }
 
   #start-btn {
-    font-family: var(--font-title);
-    font-size: 22px;
-    letter-spacing: 3px;
-    color: #08192e;
-    background: var(--accent);
-    border: none;
-    border-radius: 10px;
-    padding: 14px;
-    width: 100%;
-    max-width: 400px;
-    cursor: pointer;
-    box-shadow: 0 0 20px rgba(0,204,255,0.4);
-    transition: transform 0.1s, box-shadow 0.1s;
+    font-size: 20px; font-weight: 800; letter-spacing: 2px; color: #08192e;
+    background: #00ccff; border: none; border-radius: 10px; padding: 14px;
+    width: 100%; max-width: 420px; cursor: pointer;
   }
-  #start-btn:active { transform: scale(0.97); }
-
-  #debug-info {
-    font-size: 12px;
-    color: #334455;
-    text-align: center;
+  #dbg-btn {
+    font-size: 12px; color: #445566; background: none;
+    border: 1px solid #1a3a5c; border-radius: 8px;
+    padding: 7px 16px; cursor: pointer; width: 100%; max-width: 420px;
   }
-
-  .section-title {
-    font-family: var(--font-title);
-    font-size: 14px;
-    letter-spacing: 2px;
-    color: #4488aa;
-    margin-bottom: 4px;
-  }
+  #debug-txt { font-size: 11px; color: #334455; text-align: center; }
 </style>
 </head>
 <body>
@@ -152,204 +88,305 @@
 <h1>🏒 퍽 추적기</h1>
 
 <div id="status-bar">
-  <div id="status-dot"></div>
-  <div id="status-text">카메라 시작 버튼을 눌러주세요</div>
+  <div id="sdot"></div>
+  <div id="stxt">카메라 시작을 눌러주세요</div>
 </div>
 
 <div id="canvas-wrap">
-  <video id="videoEl" autoplay playsinline muted></video>
-  <canvas id="overlayCanvas"></canvas>
+  <video id="vid" autoplay playsinline muted></video>
+  <canvas id="oc"></canvas>
+</div>
+
+<canvas id="dbg-canvas"></canvas>
+
+<div id="conf-wrap">
+  <div class="bar-label">감지 신뢰도</div>
+  <div id="conf-bg"><div id="conf-fill"></div></div>
 </div>
 
 <div id="controls">
-  <div class="section-title">퍽 감지 설정</div>
+  <div class="sec-title">감지 설정 — 흰 바닥 + 검정 퍽 최적화</div>
   <div class="ctrl-row">
-    <label>어두움 한계</label>
-    <input type="range" id="darkThresh" min="20" max="120" value="60">
-    <span class="val" id="darkVal">60</span>
+    <label>어두움 기준</label>
+    <input type="range" id="sl-dark" min="20" max="150" value="85">
+    <span class="val" id="v-dark">85</span>
   </div>
   <div class="ctrl-row">
-    <label>최소 크기</label>
-    <input type="range" id="minSize" min="100" max="3000" step="100" value="400">
-    <span class="val" id="sizeVal">400</span>
+    <label>적응비율 %</label>
+    <input type="range" id="sl-adapt" min="20" max="70" value="40">
+    <span class="val" id="v-adapt">40</span>
   </div>
   <div class="ctrl-row">
-    <label>감도</label>
-    <input type="range" id="smoothing" min="1" max="10" value="5">
-    <span class="val" id="smoothVal">5</span>
+    <label>최소 픽셀</label>
+    <input type="range" id="sl-min" min="30" max="1000" step="10" value="150">
+    <span class="val" id="v-min">150</span>
+  </div>
+  <div class="ctrl-row">
+    <label>최대 픽셀</label>
+    <input type="range" id="sl-max" min="500" max="20000" step="500" value="8000">
+    <span class="val" id="v-max">8000</span>
+  </div>
+  <div class="ctrl-row">
+    <label>감지 영역 %</label>
+    <input type="range" id="sl-roi" min="50" max="100" value="88">
+    <span class="val" id="v-roi">88</span>
+  </div>
+  <div class="ctrl-row">
+    <label>부드러움</label>
+    <input type="range" id="sl-sm" min="1" max="20" value="7">
+    <span class="val" id="v-sm">7</span>
   </div>
 </div>
 
-<div id="code-section">
-  <div class="section-title">연결 코드 (게임 화면에 입력)</div>
+<div id="fb-wrap">
+  <div class="sec-title">Firebase DB URL</div>
+  <input id="fb-url" type="url" placeholder="https://your-app-default-rtdb.firebaseio.com">
+  <div class="fb-hint">입력 후 엔터 — 자동 저장됩니다</div>
+</div>
+
+<div id="room-wrap">
+  <div id="room-label">연결 코드 (게임 화면에 입력)</div>
   <div id="room-code">----</div>
-  <div class="hint">같은 와이파이에서 BroadcastChannel로 연결됩니다<br>다른 네트워크라면 게임 화면에서 수동 코드 입력</div>
 </div>
 
-<button id="start-btn" onclick="startCamera()">📷 카메라 시작</button>
+<button id="start-btn" onclick="startCam()">📷 카메라 시작</button>
+<button id="dbg-btn" onclick="toggleDbg()">🔍 이진화 디버그 뷰 켜기</button>
+<div id="debug-txt">퍽 X: — | Y: — | 픽셀: — | 평균밝기: —</div>
 
-<div id="debug-info">퍽 X: — &nbsp;|&nbsp; Y: — &nbsp;|&nbsp; 픽셀: —</div>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, set } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
-<script>
-const video = document.getElementById('videoEl');
-const overlay = document.getElementById('overlayCanvas');
-const octx = overlay.getContext('2d');
-const statusDot = document.getElementById('status-dot');
-const statusText = document.getElementById('status-text');
-const debugInfo = document.getElementById('debug-info');
-
-// Generate room code
-const roomCode = Math.random().toString(36).substr(2, 4).toUpperCase();
+// ── Room code ──
+const roomCode = Math.random().toString(36).substr(2,4).toUpperCase();
 document.getElementById('room-code').textContent = roomCode;
 
-// BroadcastChannel for same-device/same-browser communication
-let bc = null;
-try { bc = new BroadcastChannel('icedash_' + roomCode); } catch(e) {}
+// ── Firebase ──
+let dbRef = null;
+const fbInput = document.getElementById('fb-url');
+const saved = localStorage.getItem('fb_url') || '';
+if (saved) { fbInput.value = saved; initFb(saved); }
+fbInput.addEventListener('change', () => { const u = fbInput.value.trim(); localStorage.setItem('fb_url', u); initFb(u); });
 
-// Settings
-let darkThresh = 60, minSize = 400, smoothing = 5;
+let fbApp = null;
+function initFb(url) {
+  if (!url || !url.includes('firebaseio.com')) return;
+  try {
+    if (fbApp) return; // already initialized
+    fbApp = initializeApp({ databaseURL: url }, 'icedash');
+    const db = getDatabase(fbApp);
+    dbRef = ref(db, 'puck/' + roomCode);
+    fbInput.classList.add('ok');
+    document.getElementById('stxt').textContent = 'Firebase 연결됨 ✓ — 카메라를 시작하세요';
+  } catch(e) { console.warn(e); }
+}
+
+function sendPos(x, y, conf) {
+  const payload = { x, y, confidence: conf, ts: Date.now(), room: roomCode };
+  if (dbRef) set(dbRef, payload).catch(()=>{});
+  // BroadcastChannel fallback (same browser)
+  try {
+    if (!window._bc) window._bc = new BroadcastChannel('icedash_' + roomCode);
+    window._bc.postMessage(payload);
+  } catch(e) {}
+  try { localStorage.setItem('icedash_pos', JSON.stringify(payload)); } catch(e) {}
+}
+
+// ── Sliders ──
+const S = {};
+['dark','adapt','min','max','roi','sm'].forEach(k => {
+  S[k] = { el: document.getElementById('sl-'+k), vEl: document.getElementById('v-'+k) };
+  S[k].v = +S[k].el.value;
+  S[k].el.addEventListener('input', () => { S[k].v = +S[k].el.value; S[k].vEl.textContent = S[k].v; });
+});
+
+// ── Elements ──
+const vid = document.getElementById('vid');
+const oc  = document.getElementById('oc');
+const octx = oc.getContext('2d');
+const dbgCanvas = document.getElementById('dbg-canvas');
+const dbgCtx    = dbgCanvas.getContext('2d');
+const sdot = document.getElementById('sdot');
+const stxt = document.getElementById('stxt');
+const confFill  = document.getElementById('conf-fill');
+const debugTxt  = document.getElementById('debug-txt');
+
+// Low-res processing canvas
+const pc = document.createElement('canvas');
+const pctx = pc.getContext('2d', { willReadFrequently: true });
+const PW = 200, PH = 150;
+pc.width = PW; pc.height = PH;
+
+let running = false, dbgOn = false;
 let smoothX = 0.5, smoothY = 0.5;
+let noDetect = 0;
 
-document.getElementById('darkThresh').oninput = e => {
-  darkThresh = +e.target.value;
-  document.getElementById('darkVal').textContent = darkThresh;
-};
-document.getElementById('minSize').oninput = e => {
-  minSize = +e.target.value;
-  document.getElementById('sizeVal').textContent = minSize;
-};
-document.getElementById('smoothing').oninput = e => {
-  smoothing = +e.target.value;
-  document.getElementById('smoothVal').textContent = smoothing;
+window.toggleDbg = () => {
+  dbgOn = !dbgOn;
+  dbgCanvas.classList.toggle('show', dbgOn);
+  document.getElementById('dbg-btn').textContent = dbgOn ? '🔍 디버그 뷰 끄기' : '🔍 이진화 디버그 뷰 켜기';
 };
 
-// Hidden processing canvas
-const procCanvas = document.createElement('canvas');
-const pctx = procCanvas.getContext('2d', { willReadFrequently: true });
-const PROC_W = 160, PROC_H = 120;
-procCanvas.width = PROC_W;
-procCanvas.height = PROC_H;
-
-let running = false;
-let lastX = null, lastY = null;
-
-async function startCamera() {
+window.startCam = async () => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }
     });
-    video.srcObject = stream;
-    await video.play();
-
-    overlay.width = video.videoWidth || 640;
-    overlay.height = video.videoHeight || 480;
-
-    statusDot.className = 'connected';
-    statusText.textContent = '카메라 연결됨 — 퍽을 화면에 비춰주세요';
+    vid.srcObject = stream;
+    await vid.play();
+    oc.width  = vid.videoWidth  || 1280;
+    oc.height = vid.videoHeight || 720;
+    dbgCanvas.width = PW; dbgCanvas.height = PH;
+    sdot.className = 'on';
+    stxt.textContent = '카메라 켜짐 — 퍽을 흰 바닥에 올려주세요';
     document.getElementById('start-btn').textContent = '✅ 추적 중...';
     document.getElementById('start-btn').style.background = '#00aa66';
     running = true;
-    requestAnimationFrame(trackLoop);
-  } catch(err) {
-    statusText.textContent = '카메라 접근 실패: ' + err.message;
-    statusDot.style.background = '#ff4444';
+    requestAnimationFrame(loop);
+  } catch(e) {
+    stxt.textContent = '카메라 오류: ' + e.message;
   }
-}
+};
 
-function trackLoop() {
-  if (!running) return;
-  if (video.readyState < 2) { requestAnimationFrame(trackLoop); return; }
+function loop() {
+  if (!running || vid.readyState < 2) { requestAnimationFrame(loop); return; }
 
-  // Draw video to small processing canvas (mirrored to match display)
+  // Mirror-draw to low-res canvas
   pctx.save();
-  pctx.translate(PROC_W, 0);
-  pctx.scale(-1, 1);
-  pctx.drawImage(video, 0, 0, PROC_W, PROC_H);
+  pctx.translate(PW, 0); pctx.scale(-1, 1);
+  pctx.drawImage(vid, 0, 0, PW, PH);
   pctx.restore();
 
-  const imageData = pctx.getImageData(0, 0, PROC_W, PROC_H);
-  const data = imageData.data;
+  const imgData = pctx.getImageData(0, 0, PW, PH);
+  const d = imgData.data;
 
-  // Find dark pixels (puck)
+  // ROI margins
+  const margin = (1 - S.roi.v / 100) / 2;
+  const x0 = Math.floor(PW * margin), x1 = Math.floor(PW * (1 - margin));
+  const y0 = Math.floor(PH * margin), y1 = Math.floor(PH * (1 - margin));
+
+  // Pass 1: mean brightness in ROI
+  let bSum = 0, bCount = 0;
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      const i = (y * PW + x) * 4;
+      bSum += d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+      bCount++;
+    }
+  }
+  const meanB = bSum / bCount;
+
+  // Adaptive threshold:
+  // - absolute cap from slider
+  // - adaptive fraction of mean brightness (for varying lighting)
+  const adaptFrac = S.adapt.v / 100;
+  const thresh = Math.min(S.dark.v, meanB * adaptFrac);
+
+  // Pass 2: collect dark pixels
   let sumX = 0, sumY = 0, count = 0;
-  for (let y = 0; y < PROC_H; y++) {
-    for (let x = 0; x < PROC_W; x++) {
-      const i = (y * PROC_W + x) * 4;
-      const r = data[i], g = data[i+1], b = data[i+2];
-      const brightness = (r + g + b) / 3;
-      const saturation = Math.max(r, g, b) - Math.min(r, g, b);
-      // Dark AND not too colorful (to avoid colored objects)
-      if (brightness < darkThresh && saturation < 40) {
+  const bin = new Uint8Array(PW * PH);
+
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      const i = (y * PW + x) * 4;
+      const lum = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+      const sat = Math.max(d[i], d[i+1], d[i+2]) - Math.min(d[i], d[i+1], d[i+2]);
+      // Dark pixel: low luminance AND low saturation (not colorful)
+      if (lum < thresh && sat < 45) {
+        bin[y * PW + x] = 255;
         sumX += x; sumY += y; count++;
       }
     }
   }
 
-  const OW = overlay.width, OH = overlay.height;
+  // Debug binary view
+  if (dbgOn) {
+    const di = dbgCtx.createImageData(PW, PH);
+    for (let p = 0; p < PW * PH; p++) {
+      const v = bin[p];
+      di.data[p*4]   = v ? 0 : 200;
+      di.data[p*4+1] = v ? 220 : 220;
+      di.data[p*4+2] = v ? 255 : 200;
+      di.data[p*4+3] = 255;
+    }
+    dbgCtx.putImageData(di, 0, 0);
+    dbgCtx.strokeStyle = 'rgba(255,200,0,0.7)';
+    dbgCtx.lineWidth = 1;
+    dbgCtx.strokeRect(x0, y0, x1-x0, y1-y0);
+  }
+
+  const OW = oc.width, OH = oc.height;
   octx.clearRect(0, 0, OW, OH);
 
-  if (count > minSize) {
-    const rawX = (sumX / count) / PROC_W;
-    const rawY = (sumY / count) / PROC_H;
+  const minPx = S.min.v, maxPx = S.max.v;
 
-    const alpha = smoothing / 20;
+  if (count >= minPx && count <= maxPx) {
+    const rawX = (sumX / count) / PW;
+    const rawY = (sumY / count) / PH;
+
+    const alpha = S.sm.v / 100;
     smoothX = smoothX * (1 - alpha) + rawX * alpha;
     smoothY = smoothY * (1 - alpha) + rawY * alpha;
 
-    // Draw detection overlay
-    const px = smoothX * OW;
-    const py = smoothY * OH;
+    // Confidence score
+    const ideal = (minPx + maxPx) / 2;
+    const conf = Math.max(0, Math.min(1, 1 - Math.abs(count - ideal) / ideal));
+    const confPct = Math.round(conf * 100);
 
-    // Crosshair
-    octx.strokeStyle = 'rgba(0,255,136,0.9)';
-    octx.lineWidth = 2;
-    octx.beginPath();
-    octx.moveTo(px - 30, py); octx.lineTo(px + 30, py);
-    octx.moveTo(px, py - 30); octx.lineTo(px, py + 30);
-    octx.stroke();
+    confFill.style.width = confPct + '%';
+    confFill.style.background = confPct > 60 ? '#00ff88' : confPct > 30 ? '#ffcc00' : '#ff4444';
 
-    // Circle
-    octx.strokeStyle = 'rgba(0,255,136,0.7)';
+    // Overlay on video canvas
+    const px = smoothX * OW, py = smoothY * OH;
+    const estR = Math.sqrt(count / Math.PI) * (OW / PW);
+
+    // Puck circle
+    octx.strokeStyle = '#00ff88';
+    octx.lineWidth = 2.5;
+    octx.beginPath(); octx.arc(px, py, estR, 0, Math.PI * 2); octx.stroke();
+
+    // Glow ring
+    octx.strokeStyle = `rgba(0,255,136,${0.25 + conf * 0.4})`;
     octx.lineWidth = 3;
-    octx.beginPath();
-    octx.arc(px, py, 24, 0, Math.PI * 2);
-    octx.stroke();
+    octx.beginPath(); octx.arc(px, py, estR + 18, 0, Math.PI * 2); octx.stroke();
 
-    // Glow fill
-    const grd = octx.createRadialGradient(px, py, 0, px, py, 24);
-    grd.addColorStop(0, 'rgba(0,255,136,0.25)');
-    grd.addColorStop(1, 'rgba(0,255,136,0)');
-    octx.fillStyle = grd;
-    octx.beginPath();
-    octx.arc(px, py, 24, 0, Math.PI * 2);
-    octx.fill();
+    // Crosshair lines (gap around circle)
+    const gap = estR + 5, arm = estR + 32;
+    octx.strokeStyle = 'rgba(0,255,136,0.85)';
+    octx.lineWidth = 1.5;
+    [[px-arm,py,px-gap,py],[px+gap,py,px+arm,py],[px,py-arm,px,py-gap],[px,py+gap,px,py+arm]].forEach(([x1,y1,x2,y2])=>{
+      octx.beginPath(); octx.moveTo(x1,y1); octx.lineTo(x2,y2); octx.stroke();
+    });
 
-    // Label
-    octx.fillStyle = 'rgba(0,255,136,0.9)';
-    octx.font = 'bold 12px sans-serif';
-    octx.fillText('퍽 감지됨', px + 28, py - 8);
+    // Info label
+    octx.fillStyle = 'rgba(0,0,0,0.6)';
+    octx.fillRect(px + estR + 8, py - 20, 118, 40);
+    octx.fillStyle = '#00ff88';
+    octx.font = 'bold 13px sans-serif';
+    octx.fillText(`퍽 ${confPct}%`, px + estR + 13, py - 4);
+    octx.fillStyle = '#88ffcc';
+    octx.font = '11px sans-serif';
+    octx.fillText(`px: ${count}  임계: ${thresh.toFixed(0)}`, px + estR + 13, py + 13);
 
-    // Send position
-    const payload = { x: smoothX, y: smoothY, room: roomCode, ts: Date.now() };
-    if (bc) bc.postMessage(payload);
-
-    // Also store in localStorage for cross-tab
-    try { localStorage.setItem('icedash_pos', JSON.stringify(payload)); } catch(e) {}
-
-    statusDot.className = 'tracking';
-    statusText.textContent = `퍽 추적 중 — X: ${(smoothX * 100).toFixed(0)}%`;
-    debugInfo.textContent = `퍽 X: ${(smoothX * 100).toFixed(1)}% | Y: ${(smoothY * 100).toFixed(1)}% | 픽셀: ${count}`;
-    lastX = smoothX; lastY = smoothY;
+    sendPos(smoothX, smoothY, conf);
+    noDetect = 0;
+    sdot.className = 'found';
+    stxt.textContent = `퍽 추적 중 ✓  X: ${(smoothX*100).toFixed(0)}%  신뢰도: ${confPct}%`;
+    debugTxt.textContent = `X: ${(smoothX*100).toFixed(1)}% | Y: ${(smoothY*100).toFixed(1)}% | 픽셀: ${count} | 임계값: ${thresh.toFixed(1)} | 평균밝기: ${meanB.toFixed(0)}`;
   } else {
-    // No puck detected
-    statusDot.className = 'connected';
-    if (lastX !== null) {
-      statusText.textContent = '퍽을 찾는 중... 카메라를 퍽 위로';
+    noDetect++;
+    confFill.style.width = '0%';
+    if (noDetect > 8) {
+      sdot.className = 'on';
+      const hint = count < minPx
+        ? `어두운 픽셀 ${count}개 — "어두움 기준" 또는 "적응비율"↑`
+        : `너무 많음 ${count}px — "최대 픽셀"↑ 또는 "어두움 기준"↓`;
+      stxt.textContent = hint;
+      debugTxt.textContent = `감지: ${count}px | 임계값: ${thresh.toFixed(1)} | 평균밝기: ${meanB.toFixed(0)} | ROI: ${x0},${y0}~${x1},${y1}`;
     }
-    debugInfo.textContent = `감지된 어두운 픽셀: ${count} (최소: ${minSize})`;
   }
 
-  requestAnimationFrame(trackLoop);
+  requestAnimationFrame(loop);
 }
 </script>
 </body>
