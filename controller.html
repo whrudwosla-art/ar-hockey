@@ -1,577 +1,205 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ICE DASH — 퍽 추적기</title>
+
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+/* ===== 기본 레이아웃 ===== */
+*, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
 body {
-  background: #000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  font-family: 'Helvetica Neue', sans-serif;
-  overflow: hidden;
-  touch-action: none;
+  background:#000; display:flex; justify-content:center; align-items:center;
+  min-height:100vh; font-family:'Helvetica Neue',sans-serif;
+  overflow:hidden; touch-action:none;
 }
 
-/* ── Full-screen video ── */
-#vid {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100vw; height: 100vh;
-  object-fit: cover;
-  transform: scaleX(-1);
-  z-index: 0;
+/* ===== Video / Canvas ===== */
+#vid, #oc {
+  position:fixed; top:0; left:0;
+  width:100vw; height:100vh;
+  object-fit:cover;
+  transform:scaleX(-1); /* MIRROR DISPLAY */
 }
+#vid { z-index:0; }
+#oc  { z-index:1; }
 
-/* ── Overlay canvas (same size as video) ── */
-#oc {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100vw; height: 100vh;
-  transform: scaleX(-1);
-  z-index: 1;
-  touch-action: none;
-}
-
-/* ── UI panels ── */
-#ui {
-  position: fixed;
-  z-index: 10;
-  top: 0; left: 0; right: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  pointer-events: none;
-}
-
+/* ===== UI ===== */
+#ui { position:fixed; top:0; left:0; right:0; z-index:10; pointer-events:none; }
 #top-bar {
-  background: rgba(8,25,46,0.88);
-  backdrop-filter: blur(6px);
-  padding: 10px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  pointer-events: all;
+  display:flex; gap:10px; align-items:center;
+  background:rgba(8,25,46,.88); padding:10px 16px;
+  pointer-events:auto;
 }
-
 #sdot {
-  width: 11px; height: 11px; border-radius: 50%;
-  background: #ff4444; flex-shrink: 0;
-  transition: background 0.3s;
+  width:11px; height:11px; border-radius:50%;
+  background:#ff4444; transition:.3s;
 }
-#sdot.ready  { background: #ffcc00; box-shadow: 0 0 8px #ffcc00; }
-#sdot.found  { background: #00ff88; box-shadow: 0 0 10px #00ff88; animation: blink .5s infinite alternate; }
-#sdot.lost   { background: #ff4444; }
-@keyframes blink { to { opacity: .3; } }
-
-#stxt { flex: 1; color: white; font-size: 13px; line-height: 1.4; }
-
+#sdot.ready { background:#ffcc00; box-shadow:0 0 8px #ffcc00; }
+#sdot.found { background:#00ff88; box-shadow:0 0 10px #00ff88; animation:blink .5s infinite alternate; }
+@keyframes blink { to{opacity:.3;} }
+#stxt { flex:1; color:#fff; font-size:13px; }
 #room-pill {
-  background: rgba(0,204,255,0.15);
-  border: 1px solid rgba(0,204,255,0.4);
-  border-radius: 20px;
-  padding: 4px 12px;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 3px;
-  color: #00ccff;
-  flex-shrink: 0;
+  padding:4px 12px; border-radius:20px;
+  border:1px solid #00ccff66;
+  color:#00ccff; font-weight:800; letter-spacing:3px;
 }
 
-/* ── Bottom controls ── */
 #bottom-bar {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  z-index: 10;
-  background: rgba(8,25,46,0.88);
-  backdrop-filter: blur(6px);
-  padding: 10px 14px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  pointer-events: all;
+  position:fixed; bottom:0; left:0; right:0;
+  display:flex; gap:8px; align-items:center;
+  background:rgba(8,25,46,.88);
+  padding:10px 14px; z-index:10;
 }
 
-.btn {
-  font-size: 13px; font-weight: 700;
-  border: none; border-radius: 8px;
-  padding: 9px 14px; cursor: pointer;
-  white-space: nowrap;
-}
-.btn-blue  { background: #00ccff; color: #08192e; }
-.btn-green { background: #00aa66; color: white; }
-.btn-gray  { background: rgba(255,255,255,0.12); color: #aabbcc; }
-.btn-red   { background: rgba(255,60,60,0.25); color: #ff8888; border: 1px solid rgba(255,60,60,0.3); }
+.btn { border:none; border-radius:8px; padding:9px 14px; font-weight:700; font-size:13px; }
+.btn-red{background:#ff3c3c40;color:#ff8888}
+.btn-gray{background:#ffffff20;color:#aabbcc}
 
-/* Confidence bar */
-#conf-wrap {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.conf-lbl { font-size: 10px; color: #556677; letter-spacing: 1px; }
-.conf-bg  { background: #0a1e36; border-radius: 4px; height: 8px; overflow: hidden; }
-.conf-fill { height: 100%; width: 0%; border-radius: 4px; transition: width .08s, background .2s; }
-#puck-conf { background: #00ff88; }
+.conf-bg{background:#0a1e36;height:8px;border-radius:4px;overflow:hidden}
+.conf-fill{height:100%;width:0%;transition:.1s}
+#puck-conf{background:#00ff88}
 
-/* Firebase input overlay */
-#fb-panel {
-  position: fixed;
-  inset: 0; z-index: 20;
-  background: rgba(8,25,46,0.95);
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 14px; padding: 24px;
+#dbg-canvas {
+  position:fixed; bottom:60px; left:0;
+  width:160px; height:120px;
+  border:1px solid #00ccff;
+  display:none; z-index:20;
+  image-rendering:pixelated;
 }
-#fb-panel.hide { display: none; }
-#fb-panel h2 { color: #00ccff; font-size: 20px; letter-spacing: 2px; }
-#fb-panel p  { color: #99bbcc; font-size: 13px; text-align: center; line-height: 1.7; }
-#fb-url {
-  background: #071628; border: 1.5px solid #1a3a5c; color: #00ccff;
-  border-radius: 10px; padding: 12px 16px; font-size: 14px;
-  font-family: monospace; width: 100%; max-width: 400px;
-}
-#fb-url::placeholder { color: #223344; }
-#fb-skip { color: #445566; font-size: 13px; background: none; border: none; cursor: pointer; text-decoration: underline; }
-
-/* Draw-zone instruction overlay */
-#zone-tip {
-  position: fixed;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 8;
-  background: rgba(0,0,0,0.7);
-  border: 2px solid #ffcc00;
-  border-radius: 16px;
-  padding: 20px 28px;
-  text-align: center;
-  color: white;
-  font-size: 15px;
-  line-height: 1.8;
-  pointer-events: none;
-}
-#zone-tip.hide { display: none; }
-#zone-tip span { font-size: 28px; display: block; margin-bottom: 8px; }
-
-/* Sensitivity slider (minimal) */
-#sens-row {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 11px; color: #556677;
-}
-input[type=range] { width: 70px; accent-color: #00ccff; }
 </style>
 </head>
+
 <body>
 
 <video id="vid" autoplay playsinline muted></video>
 <canvas id="oc"></canvas>
+<canvas id="dbg-canvas"></canvas>
 
-<!-- Firebase setup panel -->
-<div id="fb-panel">
-  <h2>🏒 ICE DASH</h2>
-  <p>Firebase DB URL을 입력하면<br>게임 화면과 실시간 연결됩니다</p>
-  <input id="fb-url" type="url" placeholder="https://your-app-default-rtdb.firebaseio.com">
-  <button class="btn btn-blue" onclick="saveFb()">연결하기</button>
-  <button id="fb-skip" onclick="skipFb()">나중에 (BroadcastChannel로만 연결)</button>
-</div>
-
-<!-- Draw zone tip -->
-<div id="zone-tip">
-  <span>✋</span>
-  흰 보드의 <b>두 대각선 모서리</b>를<br>
-  순서대로 터치하세요<br>
-  <small style="color:#aaa;font-size:12px">터치 1 → 좌상단, 터치 2 → 우하단</small>
-</div>
-
-<!-- Top status bar -->
 <div id="ui">
   <div id="top-bar">
     <div id="sdot"></div>
-    <div id="stxt">카메라 시작 중...</div>
+    <div id="stxt">카메라 대기 중…</div>
     <div id="room-pill">----</div>
   </div>
 </div>
 
-<!-- Bottom controls -->
 <div id="bottom-bar">
   <button class="btn btn-red" onclick="resetZone()">영역 재설정</button>
-  <div id="conf-wrap">
-    <div class="conf-lbl">퍽 감지</div>
+  <div style="flex:1">
+    <div style="font-size:10px;color:#556677">퍽 감지</div>
     <div class="conf-bg"><div class="conf-fill" id="puck-conf"></div></div>
   </div>
-  <div id="sens-row">
-    <span>감도</span>
-    <input type="range" id="sl-dark" min="15" max="100" value="45">
-    <span id="v-dark" style="color:white;font-weight:700;font-size:11px">45</span>
-  </div>
-  <button class="btn btn-gray" id="dbg-btn" onclick="toggleDbg()">디버그</button>
+  <input type="range" id="sl-dark" min="15" max="100" value="45">
+  <button class="btn btn-gray" onclick="toggleDbg()">디버그</button>
 </div>
 
-<!-- Hidden processing canvas -->
-<canvas id="dbg-canvas" style="display:none;position:fixed;bottom:60px;left:0;width:160px;height:120px;z-index:15;border:1px solid #00ccff;image-rendering:pixelated;"></canvas>
-
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getDatabase, ref, set } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-// ── Room code ──
+/* =====================================================
+   ROOM
+===================================================== */
 const roomCode = Math.random().toString(36).substr(2,4).toUpperCase();
-document.getElementById('room-pill').textContent = roomCode;
+room-pill.textContent = roomCode;
 
-// ── Firebase ──
-let dbRef = null, fbApp = null;
+/* =====================================================
+   CAMERA
+===================================================== */
+const vid = document.getElementById('vid');
+const oc  = document.getElementById('oc');
+const octx= oc.getContext('2d');
+const dbg = document.getElementById('dbg-canvas');
+const dctx= dbg.getContext('2d');
 
-function initFb(url) {
-  if (!url || !url.includes('firebaseio.com') || fbApp) return false;
-  try {
-    fbApp = initializeApp({ databaseURL: url }, 'icedash');
-    dbRef = ref(getDatabase(fbApp), 'puck/' + roomCode);
-    return true;
-  } catch(e) { console.warn(e); return false; }
-}
+/* user-gesture play (iOS safety) */
+oc.addEventListener('pointerdown', ()=> vid.paused && vid.play(), { once:true });
 
-window.saveFb = () => {
-  const url = document.getElementById('fb-url').value.trim();
-  localStorage.setItem('fb_url', url);
-  initFb(url);
-  document.getElementById('fb-panel').classList.add('hide');
-  startCam();
-};
-window.skipFb = () => {
-  document.getElementById('fb-panel').classList.add('hide');
-  startCam();
-};
+async function startCam(){
+  const s = await navigator.mediaDevices.getUserMedia({
+    video:{ facingMode:'environment', width:{ideal:1920}, height:{ideal:1080} }
+  });
+  vid.srcObject = s;
+  await vid.play();
 
-// Restore saved URL
-const saved = localStorage.getItem('fb_url') || '';
-if (saved) {
-  document.getElementById('fb-url').value = saved;
-  initFb(saved);
-  // Auto-skip firebase panel if url already saved
-  document.getElementById('fb-panel').classList.add('hide');
-  startCam();
-}
-
-function sendPos(x, y, conf) {
-  const p = { x, y, confidence: conf, ts: Date.now(), room: roomCode };
-  if (dbRef) set(dbRef, p).catch(()=>{});
-  try {
-    if (!window._bc) window._bc = new BroadcastChannel('icedash_' + roomCode);
-    window._bc.postMessage(p);
-  } catch(e) {}
-  try { localStorage.setItem('icedash_pos', JSON.stringify(p)); } catch(e) {}
-}
-
-// ── Elements ──
-const vid   = document.getElementById('vid');
-const oc    = document.getElementById('oc');
-const octx  = oc.getContext('2d');
-const sdot  = document.getElementById('sdot');
-const stxt  = document.getElementById('stxt');
-const puckConf = document.getElementById('puck-conf');
-const dbgCanvas = document.getElementById('dbg-canvas');
-const dbgCtx    = dbgCanvas.getContext('2d');
-const zoneTip   = document.getElementById('zone-tip');
-
-// Slider
-const slDark = document.getElementById('sl-dark');
-const vDark  = document.getElementById('v-dark');
-slDark.addEventListener('input', () => { vDark.textContent = slDark.value; });
-
-// Processing canvas (low-res, landscape)
-const PW = 240, PH = 135; // 16:9 low-res
-const pc   = document.createElement('canvas');
-const pctx = pc.getContext('2d', { willReadFrequently: true });
-pc.width = PW; pc.height = PH;
-dbgCanvas.width = PW; dbgCanvas.height = PH;
-
-// Zone corners (normalized 0-1)
-let zone = null;       // { x0,y0,x1,y1 } normalized
-let tapPoints = [];    // collecting taps
-let zoneSet = false;
-
-// Smooth position
-let smoothX = 0.5, smoothY = 0.5;
-let noDetect = 0;
-let dbgOn = false;
-let running = false;
-
-window.toggleDbg = () => {
-  dbgOn = !dbgOn;
-  dbgCanvas.style.display = dbgOn ? 'block' : 'none';
-  document.getElementById('dbg-btn').textContent = dbgOn ? '디버그 끄기' : '디버그';
-};
-
-window.resetZone = () => {
-  zone = null; zoneSet = false; tapPoints = [];
-  zoneTip.classList.remove('hide');
-  stxt.textContent = '흰 보드 모서리 2곳을 터치해서 영역 설정';
-  sdot.className = 'ready';
-  puckConf.style.width = '0%';
-};
-
-// ── Touch / click to set zone ──
-oc.addEventListener('pointerdown', e => {
-  if (zoneSet) return;
-  const rect = oc.getBoundingClientRect();
-  // Mirrored canvas: flip x
-  const nx = 1 - (e.clientX - rect.left) / rect.width;
-  const ny = (e.clientY - rect.top) / rect.height;
-  tapPoints.push({ nx, ny });
-
-  if (tapPoints.length === 1) {
-    stxt.textContent = '✓ 첫 번째 완료 — 반대쪽 모서리를 터치하세요';
-    // Draw first tap point feedback
-    drawTapFeedback(e.clientX, e.clientY, 1);
-  } else if (tapPoints.length >= 2) {
-    // Zone confirmed
-    const p1 = tapPoints[0], p2 = tapPoints[1];
-    zone = {
-      x0: Math.min(p1.nx, p2.nx),
-      y0: Math.min(p1.ny, p2.ny),
-      x1: Math.max(p1.nx, p2.nx),
-      y1: Math.max(p1.ny, p2.ny),
-    };
-    zoneSet = true;
-    zoneTip.classList.add('hide');
-    stxt.textContent = '영역 설정 완료 — 퍽을 보드에 올려주세요';
-    sdot.className = 'ready';
+  function resize(){
+    oc.width=innerWidth; oc.height=innerHeight;
   }
-});
-
-function drawTapFeedback(cx, cy, n) {
-  // Flash circle at tap point
-  const div = document.createElement('div');
-  div.style.cssText = `position:fixed;left:${cx-20}px;top:${cy-20}px;width:40px;height:40px;
-    border-radius:50%;border:3px solid #ffcc00;z-index:20;pointer-events:none;
-    animation:tapPop .5s ease-out forwards;`;
-  document.body.appendChild(div);
-  setTimeout(() => div.remove(), 600);
+  resize(); addEventListener('resize',resize);
+  initProcessing();
+  requestAnimationFrame(loop);
 }
 
-// Add tap pop animation
-const style = document.createElement('style');
-style.textContent = '@keyframes tapPop{0%{transform:scale(.5);opacity:1}100%{transform:scale(2);opacity:0}}';
-document.head.appendChild(style);
-
-async function startCam() {
-  try {
-    // Request landscape-optimized video
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { ideal: 'environment' },
-        width:  { ideal: 1920 },
-        height: { ideal: 1080 },
-        frameRate: { ideal: 30 },
-        aspectRatio: { ideal: 16/9 }
-      }
-    });
-    vid.srcObject = stream;
-    await vid.play();
-
-    // Size overlay canvas to match viewport
-    function resize() {
-      oc.width  = window.innerWidth;
-      oc.height = window.innerHeight;
-    }
-    resize();
-    window.addEventListener('resize', resize);
-
-    sdot.className = 'ready';
-    stxt.textContent = '흰 보드 모서리 2곳을 터치해서 영역 설정';
-    running = true;
-    requestAnimationFrame(loop);
-  } catch(e) {
-    stxt.textContent = '카메라 오류: ' + e.message;
-    sdot.className = 'lost';
-  }
+/* =====================================================
+   PROCESSING CANVAS (REAL ASPECT)
+===================================================== */
+let pc, pctx, PW=240, PH=135;
+function initProcessing(){
+  const vw = vid.videoWidth;
+  const vh = vid.videoHeight;
+  PH = Math.round(PW * vh / vw);   // ✅ real ratio
+  pc = document.createElement('canvas');
+  pc.width = PW; pc.height = PH;
+  pctx = pc.getContext('2d',{willReadFrequently:true});
+  dbg.width = PW; dbg.height = PH;
 }
 
-function loop() {
-  if (!running || vid.readyState < 2) { requestAnimationFrame(loop); return; }
+/* =====================================================
+   ZONE
+===================================================== */
+let zone=null, taps=[];
+function resetZone(){
+  zone=null; taps=[];
+}
 
-  // Draw mirrored video to low-res proc canvas
+/* =====================================================
+   LOOP
+===================================================== */
+let frame=0, darkAvg=180;
+function loop(){
+  /* MIRROR PIPELINE:
+     CAMERA → MIRROR → PROCESS → UNMIRROR DISPLAY */
   pctx.save();
-  pctx.translate(PW, 0); pctx.scale(-1, 1);
-  pctx.drawImage(vid, 0, 0, PW, PH);
+  pctx.translate(PW,0); pctx.scale(-1,1);
+  pctx.drawImage(vid,0,0,PW,PH);
   pctx.restore();
 
-  const OW = oc.width, OH = oc.height;
-  octx.clearRect(0, 0, OW, OH);
-
-  // Draw zone box on overlay
-  if (zoneSet && zone) {
-    const zx = zone.x0 * OW, zy = zone.y0 * OH;
-    const zw = (zone.x1 - zone.x0) * OW, zh = (zone.y1 - zone.y0) * OH;
-    octx.strokeStyle = 'rgba(255,204,0,0.6)';
-    octx.lineWidth = 2;
-    octx.setLineDash([10, 6]);
-    // Mirror back for display
-    const mirrorX = OW - zx - zw;
-    octx.strokeRect(mirrorX, zy, zw, zh);
-    octx.setLineDash([]);
-  }
-
-  // Show tap point 1 while waiting for tap 2
-  if (tapPoints.length === 1 && !zoneSet) {
-    const p = tapPoints[0];
-    const tx = (1 - p.nx) * OW, ty = p.ny * OH;
-    octx.strokeStyle = '#ffcc00';
-    octx.lineWidth = 3;
-    octx.beginPath(); octx.arc(tx, ty, 14, 0, Math.PI*2); octx.stroke();
-    octx.fillStyle = '#ffcc00';
-    octx.font = 'bold 12px sans-serif';
-    octx.textAlign = 'center';
-    octx.fillText('1', tx, ty + 5);
-  }
-
-  if (!zoneSet || !zone) { requestAnimationFrame(loop); return; }
-
-  // ── Puck detection inside zone ──
-  const imgData = pctx.getImageData(0, 0, PW, PH);
-  const d = imgData.data;
-
-  const darkThresh = +slDark.value;
-
-  // Search bounds in proc canvas coords
-  const sx0 = Math.floor(zone.x0 * PW);
-  const sy0 = Math.floor(zone.y0 * PH);
-  const sx1 = Math.ceil(zone.x1  * PW);
-  const sy1 = Math.ceil(zone.y1  * PH);
-
-  // Compute mean brightness inside zone (adaptive baseline)
-  let bSum = 0, bCount = 0;
-  for (let y = sy0; y < sy1; y++) {
-    for (let x = sx0; x < sx1; x++) {
-      const i = (y * PW + x) * 4;
-      bSum += d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
-      bCount++;
+  if(++frame%3===0){ // ✅ CPU save
+    const img=pctx.getImageData(0,0,PW,PH).data;
+    let s=0,n=0;
+    for(let i=0;i<img.length;i+=20){
+      s+=img[i]*0.299+img[i+1]*0.587+img[i+2]*0.114; n++;
     }
-  }
-  const meanB = bCount > 0 ? bSum / bCount : 200;
-
-  // Adaptive threshold: puck must be significantly darker than zone mean
-  // For white board: meanB ~190-220, puck ~20-60
-  // thresh = min(slider, mean * 0.35) ensures we only catch truly dark objects
-  const adaptThresh = Math.min(darkThresh, meanB * 0.38);
-
-  let sumX = 0, sumY = 0, puckCount = 0;
-  const puckMask = new Uint8Array(PW * PH);
-
-  for (let y = sy0; y < sy1; y++) {
-    for (let x = sx0; x < sx1; x++) {
-      const i = (y * PW + x) * 4;
-      const lum = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
-      const sat = Math.max(d[i], d[i+1], d[i+2]) - Math.min(d[i], d[i+1], d[i+2]);
-      if (lum < adaptThresh && sat < 55) {
-        puckMask[y * PW + x] = 1;
-        sumX += x; sumY += y; puckCount++;
-      }
-    }
-  }
-
-  // Debug view
-  if (dbgOn) {
-    const di = dbgCtx.createImageData(PW, PH);
-    for (let p = 0; p < PW * PH; p++) {
-      const inZone = (() => {
-        const x = p % PW, y = Math.floor(p / PW);
-        return x >= sx0 && x < sx1 && y >= sy0 && y < sy1;
-      })();
-      let r = 30, g = 30, b = 30;
-      if (inZone)       { r = 200; g = 200; b = 180; } // zone = light
-      if (puckMask[p])  { r = 0;   g = 220; b = 255; } // puck = cyan
-      di.data[p*4]   = r;
-      di.data[p*4+1] = g;
-      di.data[p*4+2] = b;
-      di.data[p*4+3] = 255;
-    }
-    dbgCtx.putImageData(di, 0, 0);
-    dbgCtx.strokeStyle = '#ffcc00';
-    dbgCtx.lineWidth = 1;
-    dbgCtx.strokeRect(sx0, sy0, sx1-sx0, sy1-sy0);
-  }
-
-  // Minimum pixel count based on zone size
-  const zoneArea = (sx1-sx0) * (sy1-sy0);
-  const minPx = Math.max(5,  Math.floor(zoneArea * 0.003)); // 0.3% of zone
-  const maxPx = Math.floor(zoneArea * 0.15);                // 15% of zone
-
-  if (puckCount >= minPx && puckCount <= maxPx) {
-    // Normalize position within zone
-    const rawX = (sumX / puckCount - sx0) / (sx1 - sx0);
-    const rawY = (sumY / puckCount - sy0) / (sy1 - sy0);
-
-    const alpha = 0.15;
-    smoothX = smoothX * (1 - alpha) + rawX * alpha;
-    smoothY = smoothY * (1 - alpha) + rawY * alpha;
-    const cx = Math.max(0, Math.min(1, smoothX));
-    const cy = Math.max(0, Math.min(1, smoothY));
-
-    // Confidence
-    const ideal = (minPx + maxPx) / 2;
-    const conf = Math.max(0, Math.min(1, 1 - Math.abs(puckCount - ideal) / ideal));
-    const confPct = Math.round(conf * 100);
-    puckConf.style.width = confPct + '%';
-    puckConf.style.background = confPct > 50 ? '#00ff88' : '#ffcc00';
-
-    // Screen position (mirror back for display)
-    const zoneScreenX0 = (1 - zone.x1) * OW;
-    const zoneScreenW  = (zone.x1 - zone.x0) * OW;
-    const zoneScreenY0 = zone.y0 * OH;
-    const zoneScreenH  = (zone.y1 - zone.y0) * OH;
-
-    const px = zoneScreenX0 + cx * zoneScreenW;
-    const py = zoneScreenY0 + cy * zoneScreenH;
-    const estR = Math.max(16, Math.sqrt(puckCount / Math.PI) * (OW / PW) * 0.6);
-
-    // Draw puck indicator
-    octx.strokeStyle = '#00ff88';
-    octx.lineWidth = 3;
-    octx.beginPath(); octx.arc(px, py, estR, 0, Math.PI*2); octx.stroke();
-
-    octx.strokeStyle = `rgba(0,255,136,${0.2 + conf*0.5})`;
-    octx.lineWidth = 5;
-    octx.beginPath(); octx.arc(px, py, estR + 16, 0, Math.PI*2); octx.stroke();
-
-    const g = estR + 5, arm = estR + 32;
-    octx.strokeStyle = 'rgba(0,255,136,0.9)'; octx.lineWidth = 2;
-    [[px-arm,py,px-g,py],[px+g,py,px+arm,py],[px,py-arm,px,py-g],[px,py+g,px,py+arm]]
-      .forEach(([x1,y1,x2,y2])=>{ octx.beginPath(); octx.moveTo(x1,y1); octx.lineTo(x2,y2); octx.stroke(); });
-
-    octx.fillStyle = 'rgba(0,0,0,0.65)';
-    octx.fillRect(px + estR + 6, py - 18, 100, 36);
-    octx.fillStyle = '#00ff88'; octx.font = 'bold 13px sans-serif'; octx.textAlign = 'left';
-    octx.fillText(`퍽 ${confPct}%`, px + estR + 11, py - 2);
-    octx.fillStyle = '#88ffcc'; octx.font = '11px sans-serif';
-    octx.fillText(`${(cx*100).toFixed(0)}% / ${(cy*100).toFixed(0)}%`, px + estR + 11, py + 14);
-
-    sendPos(cx, cy, conf);
-    noDetect = 0;
-    sdot.className = 'found';
-    stxt.textContent = `퍽 추적 중 ✓  X:${(cx*100).toFixed(0)}%  신뢰:${confPct}%  임계:${adaptThresh.toFixed(0)}`;
-  } else {
-    noDetect++;
-    puckConf.style.width = '0%';
-    if (noDetect > 10) {
-      sdot.className = 'lost';
-      if (puckCount < minPx) {
-        stxt.textContent = `퍽 못 찾음 (${puckCount}px < ${minPx}) — 감도 슬라이더↑ 또는 영역 재설정`;
-      } else {
-        stxt.textContent = `오탐 많음 (${puckCount}px) — 감도 슬라이더↓`;
-      }
-    }
+    darkAvg=s/n;
   }
 
   requestAnimationFrame(loop);
 }
+
+/* =====================================================
+   VISIBILITY
+===================================================== */
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden) vid.pause();
+  else vid.play();
+});
+
+/* =====================================================
+   DEBUG
+===================================================== */
+let dbgOn=false;
+function toggleDbg(){
+  dbgOn=!dbgOn;
+  dbg.style.display=dbgOn?'block':'none';
+}
+
+/* =====================================================
+   START
+===================================================== */
+startCam();
 </script>
+
 </body>
 </html>
