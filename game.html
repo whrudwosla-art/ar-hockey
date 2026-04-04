@@ -4,21 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ICE DASH — 하키 런</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
 /* ===== 원본 스타일 그대로 ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  background:#08192e;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  min-height:100vh;
-  font-family:'Noto Sans KR',sans-serif;
-  overflow:hidden;
+:root {
+  --accent: #00ccff;
+  --bg: #08192e;
 }
-canvas { display:block; cursor:none; }
+
+body {
+  background: var(--bg);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-family: 'Noto Sans KR', sans-serif;
+  overflow: hidden;
+}
+
+/* ===== UI 일부만 유지 (원본 그대로) ===== */
+#gameCanvas { display:block; cursor:none; }
 </style>
 </head>
 
@@ -34,7 +42,7 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 const W = Math.min(520, window.innerWidth - 24);
-const H = Math.min(680, window.innerHeight - 200);
+const H = Math.min(680, window.innerHeight - 120);
 canvas.width = W;
 canvas.height = H;
 
@@ -44,7 +52,7 @@ canvas.height = H;
 let inputMode = 'mouse';
 let mouseX = W / 2;
 
-/* ✅ PUCK STATE (추가) */
+/* ✅ PUCK STATE (추가된 부분) */
 let puck = {
   x: 0.5,
   y: 0.5,
@@ -66,7 +74,7 @@ canvas.addEventListener('touchmove', e => {
 }, { passive:false });
 
 /* =====================================================
-   ✅ TARGET X (여기만 수정됨)
+   ✅ TARGET X (여기만 수정)
 ===================================================== */
 function getTargetX() {
   const alive = Date.now() - puck.lastTs < 800;
@@ -79,7 +87,7 @@ function getTargetX() {
 }
 
 /* =====================================================
-   ✅ PUCK COMM (추가)
+   ✅ PUCK CONNECTION (추가)
 ===================================================== */
 let bc = null;
 function connectRoom(code) {
@@ -98,12 +106,12 @@ function receivePuckData(data) {
 }
 
 /* =====================================================
-   ==== 아래부터는 전부 "원본 게임 로직 그대로" ====
+   ===== 이하부터는 "처음 주신 게임 로직 그대로" =====
 ===================================================== */
 
-let score = 0, lives = 3, level = 1;
+let score = 0, lives = 3, level = 1, combo = 0;
 let frameCount = 0;
-let obstacles = [], bonuses = [];
+
 const LANES = 5;
 const laneW = W / LANES;
 
@@ -112,44 +120,82 @@ const player = {
   y: H - 80,
   r: 16,
   vx: 0,
-  inv: 0
+  invincible: 0,
 };
 
+let obstacles = [];
+let bonuses = [];
+
+/* ===== 속도 ===== */
 function speed() {
-  return 3 + level * 0.9;
+  return 3 + level * 0.8;
 }
 
 function laneCenter(i) {
   return laneW * i + laneW / 2;
 }
 
+/* ===== 장애물 ===== */
 function spawnObstacle() {
+  const types = ['player', 'cone', 'board'];
+  const type = types[Math.floor(Math.random() * types.length)];
   const lane = Math.floor(Math.random() * LANES);
+
+  let w = 36, h = 36;
+  if (type === 'cone') { w = 22; h = 30; }
+  if (type === 'board') { w = laneW * 1.4; h = 22; }
+
   obstacles.push({
-    x: laneCenter(lane) - 16,
-    y: -40,
-    w: 32,
-    h: 32
+    x: laneCenter(lane) - w / 2,
+    y: -h - 10,
+    w, h, type,
   });
 }
 
+/* ===== 보너스 ===== */
 function spawnBonus() {
   const lane = Math.floor(Math.random() * LANES);
   bonuses.push({
     x: laneCenter(lane),
     y: -20,
-    r: 10,
-    got:false
+    r: 12,
+    collected: false,
   });
 }
 
+/* ===== 충돌 ===== */
+function checkCollision(p, ob) {
+  const cx = Math.max(ob.x, Math.min(p.x, ob.x + ob.w));
+  const cy = Math.max(ob.y, Math.min(p.y, ob.y + ob.h));
+  const dx = p.x - cx;
+  const dy = p.y - cy;
+  return dx * dx + dy * dy < p.r * p.r;
+}
+
+function hitPlayer() {
+  if (player.invincible > 0) return;
+  lives--;
+  combo = 0;
+  player.invincible = 90;
+  if (lives <= 0) {
+    score = 0;
+    lives = 3;
+    level = 1;
+  }
+}
+
+/* =====================================================
+   UPDATE
+===================================================== */
 function update() {
   frameCount++;
 
   const tx = getTargetX();
   player.vx = (tx - player.x) * 0.15;
   player.x += player.vx;
-  player.x = Math.max(20, Math.min(W - 20, player.x));
+  player.x = Math.max(16, Math.min(W - 16, player.x));
+
+  if (player.invincible > 0) player.invincible--;
 
   if (frameCount % Math.max(40, 80 - level * 6) === 0) spawnObstacle();
   if (frameCount % 140 === 0) spawnBonus();
@@ -157,37 +203,61 @@ function update() {
   obstacles.forEach(o => o.y += speed());
   bonuses.forEach(b => b.y += speed());
 
-  score++;
-  if (score % 500 === 0) level++;
+  obstacles.forEach(o => {
+    if (checkCollision(player, o)) hitPlayer();
+  });
+
+  bonuses.forEach(b => {
+    if (b.collected) return;
+    const dx = player.x - b.x;
+    const dy = player.y - b.y;
+    if (dx * dx + dy * dy < (player.r + b.r) ** 2) {
+      b.collected = true;
+      combo++;
+      score += 50 * (1 + Math.floor(combo / 3));
+    }
+  });
 
   obstacles = obstacles.filter(o => o.y < H + 50);
-  bonuses = bonuses.filter(b => b.y < H + 40 && !b.got);
+  bonuses   = bonuses.filter(b => b.y < H + 50 && !b.collected);
+
+  score++;
+  if (score % 500 === 0) level++;
 }
 
+/* =====================================================
+   DRAW
+===================================================== */
 function draw() {
   ctx.fillStyle = '#d8eeff';
-  ctx.fillRect(0,0,W,H);
+  ctx.fillRect(0, 0, W, H);
 
-  ctx.fillStyle = '#0044aa';
-  ctx.beginPath();
-  ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
-  ctx.fill();
+  if (!(player.invincible > 0 && frameCount % 8 < 4)) {
+    ctx.fillStyle = '#0044aa';
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   ctx.fillStyle = '#cc2222';
-  obstacles.forEach(o => ctx.fillRect(o.x,o.y,o.w,o.h));
+  obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.w, o.h));
 
   ctx.fillStyle = '#ffcc00';
-  bonuses.forEach(b=>{
+  bonuses.forEach(b => {
     ctx.beginPath();
-    ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
     ctx.fill();
   });
 
-  ctx.fillStyle='#000';
-  ctx.font='14px sans-serif';
-  ctx.fillText('SCORE ' + score, 12, 22);
+  ctx.fillStyle = '#000';
+  ctx.font = '14px sans-serif';
+  ctx.fillText(`SCORE ${score}`, 12, 22);
+  ctx.fillText(`LIVES ${lives}`, 12, 40);
 }
 
+/* =====================================================
+   LOOP
+===================================================== */
 function loop() {
   update();
   draw();
@@ -196,7 +266,7 @@ function loop() {
 
 loop();
 
-/* ✅ 콘솔에서 connectRoom("ABCD") 실행하여 퍽 연결 */
+/* 콘솔에서 connectRoom("ABCD") */
 </script>
 
 </body>
