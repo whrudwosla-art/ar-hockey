@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ICE DASH — 퍽 추적기</title>
+<title>ICE DASH — 퍽 추적기 v3</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -12,80 +12,78 @@
     display: flex; flex-direction: column; align-items: center;
     min-height: 100vh; padding: 12px; gap: 10px;
   }
-  h1 { font-size: 22px; letter-spacing: 3px; color: #00ccff; margin-top: 4px; font-weight: 800; }
+  h1 { font-size: 20px; letter-spacing: 3px; color: #00ccff; margin-top: 4px; font-weight: 800; }
 
   #status-bar {
-    width: 100%; max-width: 420px; background: #0e2540;
+    width: 100%; max-width: 440px; background: #0e2540;
     border-radius: 12px; padding: 10px 16px;
-    display: flex; align-items: center; gap: 10px; font-size: 13px;
+    display: flex; align-items: center; gap: 10px;
   }
   #sdot { width: 11px; height: 11px; border-radius: 50%; background: #ff4444; flex-shrink: 0; transition: background 0.3s; }
-  #sdot.on   { background: #00ccff; box-shadow: 0 0 8px #00ccff; animation: blink 0.7s infinite alternate; }
-  #sdot.found{ background: #00ff88; box-shadow: 0 0 10px #00ff88; }
-  @keyframes blink { to { opacity: 0.3; } }
-  #stxt { flex: 1; color: #99bbcc; font-size: 13px; }
+  #sdot.on    { background: #00ccff; box-shadow: 0 0 8px #00ccff; animation: blink .7s infinite alternate; }
+  #sdot.found { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
+  @keyframes blink { to { opacity: .3; } }
+  #stxt { flex: 1; color: #99bbcc; font-size: 13px; line-height: 1.4; }
 
   #canvas-wrap {
-    position: relative; width: 100%; max-width: 420px;
+    position: relative; width: 100%; max-width: 440px;
     border-radius: 14px; overflow: hidden; border: 2px solid #1a3a5c; background: #000;
   }
   #vid { width: 100%; display: block; transform: scaleX(-1); }
   #oc  { position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); pointer-events: none; }
 
-  #dbg-canvas {
-    width: 100%; max-width: 420px; border-radius: 10px;
-    border: 1px solid #1a3a5c; display: none; image-rendering: pixelated;
-  }
-  #dbg-canvas.show { display: block; }
+  /* Debug canvas - shows processing view */
+  #dbg { width: 100%; max-width: 440px; border-radius: 10px; border: 1px solid #1a3a5c; display: none; image-rendering: pixelated; }
+  #dbg.show { display: block; }
 
-  #conf-wrap { width: 100%; max-width: 420px; background: #0e2540; border-radius: 12px; padding: 12px 16px; }
-  .bar-label { font-size: 11px; color: #556677; margin-bottom: 6px; letter-spacing: 1px; text-transform: uppercase; }
-  #conf-bg { background: #0a1e36; border-radius: 6px; height: 12px; overflow: hidden; }
-  #conf-fill { height: 100%; width: 0%; background: #00ccff; border-radius: 6px; transition: width 0.08s, background 0.2s; }
+  #conf-wrap { width: 100%; max-width: 440px; background: #0e2540; border-radius: 12px; padding: 12px 16px; }
+  .bar-lbl { font-size: 11px; color: #556677; margin-bottom: 6px; letter-spacing: 1px; text-transform: uppercase; }
+  .bar-bg { background: #0a1e36; border-radius: 6px; height: 12px; overflow: hidden; margin-bottom: 6px; }
+  .bar-fill { height: 100%; width: 0%; border-radius: 6px; transition: width .08s, background .2s; }
+  #board-fill { background: #ffcc00; }
+  #puck-fill  { background: #00ff88; }
 
   #controls {
-    width: 100%; max-width: 420px; background: #0e2540;
+    width: 100%; max-width: 440px; background: #0e2540;
     border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;
   }
-  .sec-title { font-size: 11px; letter-spacing: 2px; color: #445566; text-transform: uppercase; }
-  .ctrl-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #99bbcc; }
-  .ctrl-row label { min-width: 100px; }
+  .sec { font-size: 11px; letter-spacing: 2px; color: #445566; text-transform: uppercase; margin-top: 4px; }
+  .row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #99bbcc; }
+  .row label { min-width: 108px; }
   input[type=range] { flex: 1; accent-color: #00ccff; }
   .val { min-width: 40px; text-align: right; color: white; font-weight: 700; font-size: 13px; }
 
   #fb-wrap {
-    width: 100%; max-width: 420px; background: #0e2540;
+    width: 100%; max-width: 440px; background: #0e2540;
     border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;
   }
   #fb-url {
     background: #071628; border: 1px solid #1a3a5c; color: #00ccff;
-    border-radius: 8px; padding: 8px 12px; font-size: 13px;
-    font-family: monospace; width: 100%;
+    border-radius: 8px; padding: 8px 12px; font-size: 13px; font-family: monospace; width: 100%;
   }
   #fb-url::placeholder { color: #223344; }
   #fb-url.ok { border-color: #00aa66; color: #00ff88; }
-  .fb-hint { font-size: 11px; color: #334455; }
 
-  #room-wrap { width: 100%; max-width: 420px; background: #0e2540; border-radius: 12px; padding: 12px 16px; text-align: center; }
-  #room-label { font-size: 11px; color: #334455; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
-  #room-code  { font-size: 38px; letter-spacing: 8px; color: #00ccff; font-weight: 900; }
+  #room-wrap { width: 100%; max-width: 440px; background: #0e2540; border-radius: 12px; padding: 12px 16px; text-align: center; }
+  #room-lbl  { font-size: 11px; color: #334455; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  #room-code { font-size: 38px; letter-spacing: 8px; color: #00ccff; font-weight: 900; }
 
-  #start-btn {
-    font-size: 20px; font-weight: 800; letter-spacing: 2px; color: #08192e;
+  .big-btn {
+    font-size: 18px; font-weight: 800; letter-spacing: 2px; color: #08192e;
     background: #00ccff; border: none; border-radius: 10px; padding: 14px;
-    width: 100%; max-width: 420px; cursor: pointer;
+    width: 100%; max-width: 440px; cursor: pointer;
   }
-  #dbg-btn {
+  .sm-btn {
     font-size: 12px; color: #445566; background: none;
     border: 1px solid #1a3a5c; border-radius: 8px;
-    padding: 7px 16px; cursor: pointer; width: 100%; max-width: 420px;
+    padding: 7px 16px; cursor: pointer; width: 100%; max-width: 440px;
   }
-  #debug-txt { font-size: 11px; color: #334455; text-align: center; }
+  #dtxt { font-size: 11px; color: #334455; text-align: center; line-height: 1.6; }
 </style>
 </head>
 <body>
 
-<h1>🏒 퍽 추적기</h1>
+<h1>🏒 퍽 추적기 v3</h1>
 
 <div id="status-bar">
   <div id="sdot"></div>
@@ -97,61 +95,66 @@
   <canvas id="oc"></canvas>
 </div>
 
-<canvas id="dbg-canvas"></canvas>
+<!-- Debug: shows what algorithm sees -->
+<canvas id="dbg"></canvas>
 
 <div id="conf-wrap">
-  <div class="bar-label">감지 신뢰도</div>
-  <div id="conf-bg"><div id="conf-fill"></div></div>
+  <div class="bar-lbl">흰 보드 감지</div>
+  <div class="bar-bg"><div class="bar-fill" id="board-fill"></div></div>
+  <div class="bar-lbl">퍽 감지 신뢰도</div>
+  <div class="bar-bg"><div class="bar-fill" id="puck-fill"></div></div>
 </div>
 
 <div id="controls">
-  <div class="sec-title">감지 설정 — 흰 바닥 + 검정 퍽 최적화</div>
-  <div class="ctrl-row">
-    <label>어두움 기준</label>
-    <input type="range" id="sl-dark" min="20" max="150" value="85">
-    <span class="val" id="v-dark">85</span>
+  <div class="sec">① 흰 보드 감지 설정</div>
+  <div class="row">
+    <label>보드 밝기 기준</label>
+    <input type="range" id="sl-wb" min="100" max="240" value="180">
+    <span class="val" id="v-wb">180</span>
   </div>
-  <div class="ctrl-row">
-    <label>적응비율 %</label>
-    <input type="range" id="sl-adapt" min="20" max="70" value="40">
-    <span class="val" id="v-adapt">40</span>
+  <div class="row">
+    <label>보드 최소 면적%</label>
+    <input type="range" id="sl-wmin" min="5" max="60" value="15">
+    <span class="val" id="v-wmin">15</span>
   </div>
-  <div class="ctrl-row">
-    <label>최소 픽셀</label>
-    <input type="range" id="sl-min" min="30" max="1000" step="10" value="150">
-    <span class="val" id="v-min">150</span>
+
+  <div class="sec">② 퍽 감지 설정 (보드 안에서만)</div>
+  <div class="row">
+    <label>퍽 어두움 기준</label>
+    <input type="range" id="sl-dark" min="10" max="120" value="55">
+    <span class="val" id="v-dark">55</span>
   </div>
-  <div class="ctrl-row">
-    <label>최대 픽셀</label>
-    <input type="range" id="sl-max" min="500" max="20000" step="500" value="8000">
-    <span class="val" id="v-max">8000</span>
+  <div class="row">
+    <label>퍽 최소 픽셀</label>
+    <input type="range" id="sl-pmin" min="5" max="500" step="5" value="20">
+    <span class="val" id="v-pmin">20</span>
   </div>
-  <div class="ctrl-row">
-    <label>감지 영역 %</label>
-    <input type="range" id="sl-roi" min="50" max="100" value="88">
-    <span class="val" id="v-roi">88</span>
+  <div class="row">
+    <label>퍽 최대 픽셀</label>
+    <input type="range" id="sl-pmax" min="50" max="5000" step="50" value="800">
+    <span class="val" id="v-pmax">800</span>
   </div>
-  <div class="ctrl-row">
+  <div class="row">
     <label>부드러움</label>
-    <input type="range" id="sl-sm" min="1" max="20" value="7">
-    <span class="val" id="v-sm">7</span>
+    <input type="range" id="sl-sm" min="1" max="20" value="8">
+    <span class="val" id="v-sm">8</span>
   </div>
 </div>
 
 <div id="fb-wrap">
-  <div class="sec-title">Firebase DB URL</div>
+  <div class="sec">Firebase DB URL</div>
   <input id="fb-url" type="url" placeholder="https://your-app-default-rtdb.firebaseio.com">
-  <div class="fb-hint">입력 후 엔터 — 자동 저장됩니다</div>
+  <div style="font-size:11px;color:#334455">입력 후 엔터 — 자동저장</div>
 </div>
 
 <div id="room-wrap">
-  <div id="room-label">연결 코드 (게임 화면에 입력)</div>
+  <div id="room-lbl">연결 코드</div>
   <div id="room-code">----</div>
 </div>
 
-<button id="start-btn" onclick="startCam()">📷 카메라 시작</button>
-<button id="dbg-btn" onclick="toggleDbg()">🔍 이진화 디버그 뷰 켜기</button>
-<div id="debug-txt">퍽 X: — | Y: — | 픽셀: — | 평균밝기: —</div>
+<button class="big-btn" onclick="startCam()">📷 카메라 시작</button>
+<button class="sm-btn"  onclick="toggleDbg()">🔍 디버그 뷰 켜기/끄기</button>
+<div id="dtxt">대기 중...</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -162,69 +165,69 @@ const roomCode = Math.random().toString(36).substr(2,4).toUpperCase();
 document.getElementById('room-code').textContent = roomCode;
 
 // ── Firebase ──
-let dbRef = null;
+let dbRef = null, fbApp = null;
 const fbInput = document.getElementById('fb-url');
-const saved = localStorage.getItem('fb_url') || '';
-if (saved) { fbInput.value = saved; initFb(saved); }
+const savedUrl = localStorage.getItem('fb_url') || '';
+if (savedUrl) { fbInput.value = savedUrl; initFb(savedUrl); }
 fbInput.addEventListener('change', () => { const u = fbInput.value.trim(); localStorage.setItem('fb_url', u); initFb(u); });
 
-let fbApp = null;
 function initFb(url) {
-  if (!url || !url.includes('firebaseio.com')) return;
+  if (!url || !url.includes('firebaseio.com') || fbApp) return;
   try {
-    if (fbApp) return; // already initialized
     fbApp = initializeApp({ databaseURL: url }, 'icedash');
-    const db = getDatabase(fbApp);
-    dbRef = ref(db, 'puck/' + roomCode);
+    dbRef = ref(getDatabase(fbApp), 'puck/' + roomCode);
     fbInput.classList.add('ok');
-    document.getElementById('stxt').textContent = 'Firebase 연결됨 ✓ — 카메라를 시작하세요';
   } catch(e) { console.warn(e); }
 }
 
 function sendPos(x, y, conf) {
-  const payload = { x, y, confidence: conf, ts: Date.now(), room: roomCode };
-  if (dbRef) set(dbRef, payload).catch(()=>{});
-  // BroadcastChannel fallback (same browser)
+  const p = { x, y, confidence: conf, ts: Date.now(), room: roomCode };
+  if (dbRef) set(dbRef, p).catch(()=>{});
   try {
     if (!window._bc) window._bc = new BroadcastChannel('icedash_' + roomCode);
-    window._bc.postMessage(payload);
+    window._bc.postMessage(p);
   } catch(e) {}
-  try { localStorage.setItem('icedash_pos', JSON.stringify(payload)); } catch(e) {}
+  try { localStorage.setItem('icedash_pos', JSON.stringify(p)); } catch(e) {}
 }
 
 // ── Sliders ──
 const S = {};
-['dark','adapt','min','max','roi','sm'].forEach(k => {
-  S[k] = { el: document.getElementById('sl-'+k), vEl: document.getElementById('v-'+k) };
-  S[k].v = +S[k].el.value;
-  S[k].el.addEventListener('input', () => { S[k].v = +S[k].el.value; S[k].vEl.textContent = S[k].v; });
+['wb','wmin','dark','pmin','pmax','sm'].forEach(k => {
+  const el = document.getElementById('sl-'+k);
+  const vEl = document.getElementById('v-'+k);
+  S[k] = { el, vEl, get v() { return +el.value; } };
+  el.addEventListener('input', () => { vEl.textContent = el.value; });
 });
 
-// ── Elements ──
-const vid = document.getElementById('vid');
-const oc  = document.getElementById('oc');
+// ── DOM ──
+const vid  = document.getElementById('vid');
+const oc   = document.getElementById('oc');
 const octx = oc.getContext('2d');
-const dbgCanvas = document.getElementById('dbg-canvas');
+const dbgCanvas = document.getElementById('dbg');
 const dbgCtx    = dbgCanvas.getContext('2d');
 const sdot = document.getElementById('sdot');
 const stxt = document.getElementById('stxt');
-const confFill  = document.getElementById('conf-fill');
-const debugTxt  = document.getElementById('debug-txt');
+const boardFill = document.getElementById('board-fill');
+const puckFill  = document.getElementById('puck-fill');
+const dtxt = document.getElementById('dtxt');
 
 // Low-res processing canvas
-const pc = document.createElement('canvas');
+const PW = 160, PH = 120;
+const pc   = document.createElement('canvas');
 const pctx = pc.getContext('2d', { willReadFrequently: true });
-const PW = 200, PH = 150;
 pc.width = PW; pc.height = PH;
 
 let running = false, dbgOn = false;
 let smoothX = 0.5, smoothY = 0.5;
 let noDetect = 0;
 
+// Board bounding box (found from white detection)
+let boardX0 = 0, boardY0 = 0, boardX1 = PW, boardY1 = PH;
+let boardFound = false;
+
 window.toggleDbg = () => {
   dbgOn = !dbgOn;
   dbgCanvas.classList.toggle('show', dbgOn);
-  document.getElementById('dbg-btn').textContent = dbgOn ? '🔍 디버그 뷰 끄기' : '🔍 이진화 디버그 뷰 켜기';
 };
 
 window.startCam = async () => {
@@ -238,9 +241,9 @@ window.startCam = async () => {
     oc.height = vid.videoHeight || 720;
     dbgCanvas.width = PW; dbgCanvas.height = PH;
     sdot.className = 'on';
-    stxt.textContent = '카메라 켜짐 — 퍽을 흰 바닥에 올려주세요';
-    document.getElementById('start-btn').textContent = '✅ 추적 중...';
-    document.getElementById('start-btn').style.background = '#00aa66';
+    stxt.textContent = '카메라 켜짐 — 흰 보드가 화면에 보이게 해주세요';
+    document.getElementById('big-btn') && (document.querySelector('.big-btn').textContent = '✅ 추적 중...');
+    document.querySelector('.big-btn').style.background = '#00aa66';
     running = true;
     requestAnimationFrame(loop);
   } catch(e) {
@@ -251,7 +254,7 @@ window.startCam = async () => {
 function loop() {
   if (!running || vid.readyState < 2) { requestAnimationFrame(loop); return; }
 
-  // Mirror-draw to low-res canvas
+  // Draw mirrored video to low-res canvas
   pctx.save();
   pctx.translate(PW, 0); pctx.scale(-1, 1);
   pctx.drawImage(vid, 0, 0, PW, PH);
@@ -260,129 +263,182 @@ function loop() {
   const imgData = pctx.getImageData(0, 0, PW, PH);
   const d = imgData.data;
 
-  // ROI margins
-  const margin = (1 - S.roi.v / 100) / 2;
-  const x0 = Math.floor(PW * margin), x1 = Math.floor(PW * (1 - margin));
-  const y0 = Math.floor(PH * margin), y1 = Math.floor(PH * (1 - margin));
+  const wbThresh = S.wb.v;   // brightness threshold for "white board"
+  const darkThresh = S.dark.v; // brightness threshold for "dark puck"
 
-  // Pass 1: mean brightness in ROI
-  let bSum = 0, bCount = 0;
-  for (let y = y0; y < y1; y++) {
-    for (let x = x0; x < x1; x++) {
+  // ── STEP 1: Find white board ──
+  // Mark pixels that are very bright (white board surface)
+  const whiteMask = new Uint8Array(PW * PH);
+  let whiteCount = 0;
+  let wxMin = PW, wxMax = 0, wyMin = PH, wyMax = 0;
+
+  for (let y = 0; y < PH; y++) {
+    for (let x = 0; x < PW; x++) {
       const i = (y * PW + x) * 4;
-      bSum += d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
-      bCount++;
-    }
-  }
-  const meanB = bSum / bCount;
-
-  // Adaptive threshold:
-  // - absolute cap from slider
-  // - adaptive fraction of mean brightness (for varying lighting)
-  const adaptFrac = S.adapt.v / 100;
-  const thresh = Math.min(S.dark.v, meanB * adaptFrac);
-
-  // Pass 2: collect dark pixels
-  let sumX = 0, sumY = 0, count = 0;
-  const bin = new Uint8Array(PW * PH);
-
-  for (let y = y0; y < y1; y++) {
-    for (let x = x0; x < x1; x++) {
-      const i = (y * PW + x) * 4;
-      const lum = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
-      const sat = Math.max(d[i], d[i+1], d[i+2]) - Math.min(d[i], d[i+1], d[i+2]);
-      // Dark pixel: low luminance AND low saturation (not colorful)
-      if (lum < thresh && sat < 45) {
-        bin[y * PW + x] = 255;
-        sumX += x; sumY += y; count++;
+      const r = d[i], g = d[i+1], b = d[i+2];
+      const lum = r * 0.299 + g * 0.587 + b * 0.114;
+      const sat = Math.max(r,g,b) - Math.min(r,g,b);
+      // White: bright AND low saturation (not colorful)
+      if (lum > wbThresh && sat < 40) {
+        whiteMask[y * PW + x] = 1;
+        whiteCount++;
+        if (x < wxMin) wxMin = x; if (x > wxMax) wxMax = x;
+        if (y < wyMin) wyMin = y; if (y > wyMax) wyMax = y;
       }
     }
   }
 
-  // Debug binary view
+  const whiteRatio = whiteCount / (PW * PH);
+  const wminRatio  = S.wmin.v / 100;
+  boardFound = whiteRatio >= wminRatio;
+
+  boardFill.style.width = Math.round(whiteRatio * 100) + '%';
+  boardFill.style.background = boardFound ? '#ffcc00' : '#ff4444';
+
+  // Use board bounding box with small padding
+  if (boardFound) {
+    const pad = 2;
+    boardX0 = Math.max(0, wxMin - pad);
+    boardY0 = Math.max(0, wyMin - pad);
+    boardX1 = Math.min(PW, wxMax + pad);
+    boardY1 = Math.min(PH, wyMax + pad);
+  }
+
+  // ── STEP 2: Find dark puck INSIDE board only ──
+  let sumX = 0, sumY = 0, puckCount = 0;
+  const puckMask = new Uint8Array(PW * PH);
+
+  const searchX0 = boardFound ? boardX0 : 0;
+  const searchY0 = boardFound ? boardY0 : 0;
+  const searchX1 = boardFound ? boardX1 : PW;
+  const searchY1 = boardFound ? boardY1 : PH;
+
+  for (let y = searchY0; y < searchY1; y++) {
+    for (let x = searchX0; x < searchX1; x++) {
+      const i = (y * PW + x) * 4;
+      const r = d[i], g = d[i+1], b = d[i+2];
+      const lum = r * 0.299 + g * 0.587 + b * 0.114;
+      const sat = Math.max(r,g,b) - Math.min(r,g,b);
+      // Dark AND low saturation = black puck
+      if (lum < darkThresh && sat < 50) {
+        puckMask[y * PW + x] = 1;
+        sumX += x; sumY += y; puckCount++;
+      }
+    }
+  }
+
+  // ── Debug view ──
   if (dbgOn) {
     const di = dbgCtx.createImageData(PW, PH);
     for (let p = 0; p < PW * PH; p++) {
-      const v = bin[p];
-      di.data[p*4]   = v ? 0 : 200;
-      di.data[p*4+1] = v ? 220 : 220;
-      di.data[p*4+2] = v ? 255 : 200;
+      let r = 40, g = 50, b = 60; // dark background
+      if (whiteMask[p]) { r = 220; g = 220; b = 200; } // white board = light yellow
+      if (puckMask[p])  { r = 0;   g = 220; b = 255; } // puck = cyan
+      di.data[p*4]   = r;
+      di.data[p*4+1] = g;
+      di.data[p*4+2] = b;
       di.data[p*4+3] = 255;
     }
     dbgCtx.putImageData(di, 0, 0);
-    dbgCtx.strokeStyle = 'rgba(255,200,0,0.7)';
-    dbgCtx.lineWidth = 1;
-    dbgCtx.strokeRect(x0, y0, x1-x0, y1-y0);
+    // Draw board bounding box
+    if (boardFound) {
+      dbgCtx.strokeStyle = '#ffcc00';
+      dbgCtx.lineWidth = 1.5;
+      dbgCtx.strokeRect(boardX0, boardY0, boardX1-boardX0, boardY1-boardY0);
+    }
   }
 
+  // ── STEP 3: Output ──
   const OW = oc.width, OH = oc.height;
   octx.clearRect(0, 0, OW, OH);
 
-  const minPx = S.min.v, maxPx = S.max.v;
+  // Draw board outline on video overlay
+  if (boardFound) {
+    const bx = (boardX0/PW)*OW, by = (boardY0/PH)*OH;
+    const bw = ((boardX1-boardX0)/PW)*OW, bh = ((boardY1-boardY0)/PH)*OH;
+    octx.strokeStyle = 'rgba(255,200,0,0.5)';
+    octx.lineWidth = 2;
+    octx.setLineDash([8,6]);
+    octx.strokeRect(bx, by, bw, bh);
+    octx.setLineDash([]);
+  }
 
-  if (count >= minPx && count <= maxPx) {
-    const rawX = (sumX / count) / PW;
-    const rawY = (sumY / count) / PH;
+  const pmin = S.pmin.v, pmax = S.pmax.v;
+
+  if (puckCount >= pmin && puckCount <= pmax) {
+    const rawX = (sumX / puckCount - searchX0) / (searchX1 - searchX0);
+    const rawY = (sumY / puckCount - searchY0) / (searchY1 - searchY0);
 
     const alpha = S.sm.v / 100;
     smoothX = smoothX * (1 - alpha) + rawX * alpha;
     smoothY = smoothY * (1 - alpha) + rawY * alpha;
 
-    // Confidence score
-    const ideal = (minPx + maxPx) / 2;
-    const conf = Math.max(0, Math.min(1, 1 - Math.abs(count - ideal) / ideal));
+    const clampX = Math.max(0, Math.min(1, smoothX));
+    const clampY = Math.max(0, Math.min(1, smoothY));
+
+    // Confidence based on pixel count fitting expected range
+    const ideal = (pmin + pmax) / 2;
+    const conf  = Math.max(0, Math.min(1, 1 - Math.abs(puckCount - ideal) / ideal));
     const confPct = Math.round(conf * 100);
 
-    confFill.style.width = confPct + '%';
-    confFill.style.background = confPct > 60 ? '#00ff88' : confPct > 30 ? '#ffcc00' : '#ff4444';
+    puckFill.style.width = confPct + '%';
+    puckFill.style.background = confPct > 60 ? '#00ff88' : confPct > 30 ? '#ffcc00' : '#ff4444';
 
-    // Overlay on video canvas
-    const px = smoothX * OW, py = smoothY * OH;
-    const estR = Math.sqrt(count / Math.PI) * (OW / PW);
+    // Map puck position within board bounds to screen coords
+    const px = (boardX0/PW + (clampX * (boardX1-boardX0)/PW)) * OW;
+    const py = (boardY0/PH + (clampY * (boardY1-boardY0)/PH)) * OH;
+    const estR = Math.max(12, Math.sqrt(puckCount / Math.PI) * (OW / PW));
 
     // Puck circle
     octx.strokeStyle = '#00ff88';
-    octx.lineWidth = 2.5;
-    octx.beginPath(); octx.arc(px, py, estR, 0, Math.PI * 2); octx.stroke();
-
-    // Glow ring
-    octx.strokeStyle = `rgba(0,255,136,${0.25 + conf * 0.4})`;
     octx.lineWidth = 3;
-    octx.beginPath(); octx.arc(px, py, estR + 18, 0, Math.PI * 2); octx.stroke();
+    octx.beginPath(); octx.arc(px, py, estR, 0, Math.PI*2); octx.stroke();
 
-    // Crosshair lines (gap around circle)
-    const gap = estR + 5, arm = estR + 32;
-    octx.strokeStyle = 'rgba(0,255,136,0.85)';
+    // Glow
+    octx.strokeStyle = `rgba(0,255,136,${0.2 + conf * 0.5})`;
+    octx.lineWidth = 4;
+    octx.beginPath(); octx.arc(px, py, estR + 16, 0, Math.PI*2); octx.stroke();
+
+    // Crosshair
+    const gap = estR + 4, arm = estR + 28;
+    octx.strokeStyle = 'rgba(0,255,136,0.9)';
     octx.lineWidth = 1.5;
-    [[px-arm,py,px-gap,py],[px+gap,py,px+arm,py],[px,py-arm,px,py-gap],[px,py+gap,px,py+arm]].forEach(([x1,y1,x2,y2])=>{
-      octx.beginPath(); octx.moveTo(x1,y1); octx.lineTo(x2,y2); octx.stroke();
-    });
+    [[px-arm,py,px-gap,py],[px+gap,py,px+arm,py],[px,py-arm,px,py-gap],[px,py+gap,px,py+arm]]
+      .forEach(([x1,y1,x2,y2]) => { octx.beginPath(); octx.moveTo(x1,y1); octx.lineTo(x2,y2); octx.stroke(); });
 
-    // Info label
-    octx.fillStyle = 'rgba(0,0,0,0.6)';
-    octx.fillRect(px + estR + 8, py - 20, 118, 40);
+    // Label
+    octx.fillStyle = 'rgba(0,0,0,0.65)';
+    octx.fillRect(px + estR + 6, py - 22, 124, 44);
     octx.fillStyle = '#00ff88';
     octx.font = 'bold 13px sans-serif';
-    octx.fillText(`퍽 ${confPct}%`, px + estR + 13, py - 4);
+    octx.fillText(`퍽 감지 ${confPct}%`, px + estR + 11, py - 5);
     octx.fillStyle = '#88ffcc';
     octx.font = '11px sans-serif';
-    octx.fillText(`px: ${count}  임계: ${thresh.toFixed(0)}`, px + estR + 13, py + 13);
+    octx.fillText(`위치 X:${(clampX*100).toFixed(0)}% Y:${(clampY*100).toFixed(0)}%`, px + estR + 11, py + 12);
 
-    sendPos(smoothX, smoothY, conf);
+    // Send normalized position WITHIN board
+    sendPos(clampX, clampY, conf);
+
     noDetect = 0;
     sdot.className = 'found';
-    stxt.textContent = `퍽 추적 중 ✓  X: ${(smoothX*100).toFixed(0)}%  신뢰도: ${confPct}%`;
-    debugTxt.textContent = `X: ${(smoothX*100).toFixed(1)}% | Y: ${(smoothY*100).toFixed(1)}% | 픽셀: ${count} | 임계값: ${thresh.toFixed(1)} | 평균밝기: ${meanB.toFixed(0)}`;
+    stxt.textContent = `퍽 추적 중 ✓  X: ${(clampX*100).toFixed(0)}%  신뢰도: ${confPct}%`;
+    dtxt.textContent = `퍽픽셀: ${puckCount} | 보드: ${(whiteRatio*100).toFixed(0)}% | 임계: ${darkThresh}`;
+
   } else {
     noDetect++;
-    confFill.style.width = '0%';
+    puckFill.style.width = '0%';
+
     if (noDetect > 8) {
-      sdot.className = 'on';
-      const hint = count < minPx
-        ? `어두운 픽셀 ${count}개 — "어두움 기준" 또는 "적응비율"↑`
-        : `너무 많음 ${count}px — "최대 픽셀"↑ 또는 "어두움 기준"↓`;
-      stxt.textContent = hint;
-      debugTxt.textContent = `감지: ${count}px | 임계값: ${thresh.toFixed(1)} | 평균밝기: ${meanB.toFixed(0)} | ROI: ${x0},${y0}~${x1},${y1}`;
+      sdot.className = boardFound ? 'on' : 'on';
+
+      if (!boardFound) {
+        stxt.textContent = `흰 보드가 안 보여요 — 보드를 화면 중앙에 크게 비춰주세요 (현재 흰색: ${(whiteRatio*100).toFixed(0)}%)`;
+      } else if (puckCount < pmin) {
+        stxt.textContent = `퍽을 못 찾아요 — "퍽 어두움 기준"↑ 또는 "퍽 최소 픽셀"↓ (현재: ${puckCount}px)`;
+      } else {
+        stxt.textContent = `감지 영역 너무 큼 (${puckCount}px) — "퍽 최대 픽셀"↑ 또는 "퍽 어두움 기준"↓`;
+      }
+      dtxt.textContent = `퍽픽셀: ${puckCount} | 보드감지: ${boardFound} | 보드면적: ${(whiteRatio*100).toFixed(1)}%`;
     }
   }
 
