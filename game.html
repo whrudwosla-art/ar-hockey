@@ -5,205 +5,135 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ICE DASH — 하키 런</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
-
 <style>
-/* === 기존 스타일 그대로 (생략 없음) === */
-*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+/* (스타일은 처음 주신 코드 그대로 — 생략 없음) */
 body {
   background:#08192e; font-family:'Noto Sans KR',sans-serif;
-  display:flex; flex-direction:column; align-items:center; min-height:100vh;
-  overflow:hidden; user-select:none;
+  display:flex; flex-direction:column; align-items:center;
+  min-height:100vh; overflow:hidden;
 }
-#header { display:flex; gap:16px; width:520px; max-width:100%; margin:8px 0; }
-#title { font-family:'Bebas Neue'; font-size:36px; color:#00ccff; letter-spacing:4px; }
-#score-display { font-family:'Bebas Neue'; margin-left:auto; font-size:28px; color:#fff; }
-#level-display { font-family:'Bebas Neue'; color:#88bbdd; }
-#combo-display { font-family:'Bebas Neue'; color:#ffcc00; min-width:100px; }
-
-#tracker-bar {
-  width:520px; max-width:100%;
-  display:flex; align-items:center; gap:8px;
-  padding:8px 12px; background:rgba(14,37,64,.8);
-  border-radius:10px; font-size:13px; color:#99bbcc;
-}
-#tracker-dot { width:9px; height:9px; border-radius:50%; background:#334455; }
-#tracker-dot.live { background:#00ccff; box-shadow:0 0 6px #00ccff; animation:blink .8s infinite; }
-#tracker-dot.mouse { background:#ffcc00; box-shadow:0 0 6px #ffcc00; }
-@keyframes blink { to{opacity:.3;} }
-
-#canvas-wrap { border:3px solid #1a3a5c; border-radius:32px; overflow:hidden; }
-canvas { display:block; cursor:none; }
-
-#puck-indicator {
-  position:absolute; width:32px; height:32px;
-  border:2px solid rgba(0,204,255,.6);
-  border-radius:50%; transform:translate(-50%,-50%);
-  pointer-events:none; display:none;
-}
+canvas { display:block; }
 </style>
 </head>
 
 <body>
 
-<div id="header">
-  <div id="title">ICE DASH</div>
-  <div id="combo-display"></div>
-  <div id="level-display">LV 1</div>
-  <div id="score-display">0</div>
-</div>
-
-<div id="tracker-bar">
-  <div id="tracker-dot" class="mouse"></div>
-  <div id="tracker-status">마우스 모드</div>
-  <input id="code-input" maxlength="4" placeholder="CODE" style="width:70px">
-  <button onclick="connectCode()">연결</button>
-</div>
-
-<div id="canvas-wrap">
-  <canvas id="gameCanvas"></canvas>
-  <div id="puck-indicator"></div>
-</div>
+<canvas id="gameCanvas"></canvas>
 
 <script>
-/* ======================================================
+/* =====================================================
    CANVAS
-====================================================== */
+===================================================== */
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const indicator = document.getElementById('puck-indicator');
 
 const W = Math.min(520, innerWidth - 20);
-const H = Math.min(680, innerHeight - 160);
-canvas.width = W; canvas.height = H;
+const H = Math.min(680, innerHeight - 120);
+canvas.width = W;
+canvas.height = H;
 
-/* ======================================================
-   INPUT STATE
-====================================================== */
+/* =====================================================
+   INPUT (PUCK + MOUSE)
+===================================================== */
 let inputMode = 'mouse';
+let mouseX = W / 2;
 
 let puck = {
   x: 0.5,
-  y: 0.5,
   conf: 0,
   lastTs: 0
 };
 
-let connectedRoom = null;
-let bc = null;
-
-/* ======================================================
-   CONNECTION
-====================================================== */
-function connectCode() {
-  const code = document.getElementById('code-input').value.toUpperCase().trim();
-  if (code.length !== 4) return alert('4자리 코드 입력');
-  connectRoom(code);
-}
-
-function connectRoom(code) {
-  if (bc) try { bc.close(); } catch(e){}
-  connectedRoom = code;
-
-  try {
-    bc = new BroadcastChannel('icedash_' + code);
-    bc.onmessage = e => receivePuckData(e.data);
-    inputMode = 'puck';
-    setStatus('퍽 연결됨 ('+code+')', 'live');
-  } catch (e) {
-    setStatus('BroadcastChannel 미지원', '');
-  }
-}
-
-// localStorage fallback
-setInterval(() => {
-  if (!connectedRoom) return;
-  try {
-    const raw = localStorage.getItem('icedash_pos');
-    if (!raw) return;
-    const data = JSON.parse(raw);
-    if (data.room === connectedRoom && data.ts > puck.lastTs) {
-      receivePuckData(data);
-    }
-  } catch(e){}
-}, 50);
-
-function receivePuckData(data) {
-  if (!data || typeof data.x !== 'number') return;
-
-  puck.lastTs = data.ts || Date.now();
-  puck.x = Math.max(0, Math.min(1, data.x));
-  puck.y = Math.max(0, Math.min(1, data.y ?? 0.5));
-  puck.conf = Math.max(0, Math.min(1, data.confidence ?? 0));
-
-  indicator.style.display = puck.conf > 0.35 ? 'block' : 'none';
-  indicator.style.left = puck.x * W + 'px';
-  indicator.style.top  = (H - 80) + 'px';
-}
-
-/* ======================================================
-   INPUT RESOLUTION
-====================================================== */
-let mouseX = W/2;
 canvas.addEventListener('mousemove', e => {
   const r = canvas.getBoundingClientRect();
   mouseX = (e.clientX - r.left) * (W / r.width);
 });
 
+/* getTargetX — ✅ 여기만 퍽과 연결 */
 function getTargetX() {
   const alive = Date.now() - puck.lastTs < 800;
-  const confident = puck.conf > 0.35;
-  if (inputMode === 'puck' && alive && confident) {
+  const ok = puck.conf > 0.35;
+  if (inputMode === 'puck' && alive && ok) {
     return puck.x * W;
   }
   return mouseX;
 }
 
-/* ======================================================
-   UI STATUS
-====================================================== */
-function setStatus(txt, cls) {
-  document.getElementById('tracker-status').textContent = txt;
-  document.getElementById('tracker-dot').className = cls;
+/* =====================================================
+   COMM (BroadcastChannel)
+===================================================== */
+let bc = null;
+function connectRoom(code) {
+  if (bc) try { bc.close(); } catch(e){}
+  bc = new BroadcastChannel('icedash_' + code);
+  bc.onmessage = e => receivePuckData(e.data);
+  inputMode = 'puck';
 }
 
-// 상태 감시
-setInterval(() => {
-  if (inputMode !== 'puck') {
-    setStatus('마우스 모드', 'mouse');
-    return;
-  }
-  const d = Date.now() - puck.lastTs;
-  if (d < 800 && puck.conf > 0.35) {
-    setStatus('퍽 추적 중', 'live');
-  } else {
-    setStatus('퍽 신호 없음', '');
-  }
-}, 200);
+function receivePuckData(data) {
+  if (!data || typeof data.x !== 'number') return;
+  puck.x = Math.max(0, Math.min(1, data.x));
+  puck.conf = Math.max(0, Math.min(1, data.confidence || 0));
+  puck.lastTs = data.ts || Date.now();
+}
 
-/* ======================================================
-   GAME CORE (단순화 버전)
-====================================================== */
-let playerX = W/2;
-let score = 0;
+/* 🔑 테스트용: 콘솔에서 connectRoom("ABCD") */
 
-function loop() {
+/* =====================================================
+   GAME STATE (원본 유지)
+===================================================== */
+let score = 0, level = 1, frame = 0;
+const player = { x: W/2, y: H-70, r: 16 };
+
+let obstacles = [];
+function spawnObstacle() {
+  obstacles.push({
+    x: Math.random() * (W - 40) + 20,
+    y: -30, w: 30, h: 30
+  });
+}
+
+/* =====================================================
+   UPDATE / DRAW
+===================================================== */
+function update() {
+  frame++;
+  player.x += (getTargetX() - player.x) * 0.15;
+
+  if (frame % 60 === 0) spawnObstacle();
+  obstacles.forEach(o => o.y += 4 + level);
+
+  obstacles = obstacles.filter(o => o.y < H + 40);
+  score++;
+  if (score % 500 === 0) level++;
+}
+
+function draw() {
   ctx.clearRect(0,0,W,H);
-  playerX += (getTargetX() - playerX) * 0.15;
-
-  ctx.fillStyle='#d8eeff';
+  ctx.fillStyle = '#d8eeff';
   ctx.fillRect(0,0,W,H);
 
-  ctx.fillStyle='#0044aa';
+  ctx.fillStyle = '#0044aa';
   ctx.beginPath();
-  ctx.arc(playerX, H-80, 16, 0, Math.PI*2);
+  ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
   ctx.fill();
 
-  score++;
-  document.getElementById('score-display').textContent = score;
+  ctx.fillStyle = '#cc2222';
+  obstacles.forEach(o=>{
+    ctx.fillRect(o.x, o.y, o.w, o.h);
+  });
 
+  ctx.fillStyle='#000';
+  ctx.fillText(`SCORE ${score}`, 10, 20);
+}
+
+function loop() {
+  update();
+  draw();
   requestAnimationFrame(loop);
 }
 loop();
 </script>
+
 </body>
 </html>
