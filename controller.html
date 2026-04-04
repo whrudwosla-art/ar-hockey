@@ -2,135 +2,49 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ICE DASH — 퍽 추적기</title>
 
 <style>
-*, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+* { box-sizing:border-box; margin:0; padding:0 }
+body { background:black; overflow:hidden; touch-action:none; }
 
-body {
-  background:#000;
-  font-family:system-ui, -apple-system, sans-serif;
-  overflow:hidden;
-  touch-action:none;
-}
-
-/* ===== VIDEO / CANVAS ===== */
 #vid, #oc {
-  position:fixed;
-  inset:0;
-  width:100vw;
-  height:100vh;
+  position:fixed; inset:0;
+  width:100vw; height:100vh;
   object-fit:cover;
   transform:scaleX(-1);
 }
-#vid { z-index:0; }
-#oc  { z-index:1; }
 
-/* ===== TOP BAR ===== */
-#top-bar {
-  position:fixed;
-  top:0; left:0; right:0;
-  z-index:10;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:10px 14px;
-  background:rgba(8,25,46,0.88);
+#top {
+  position:fixed; top:0; left:0; right:0;
+  background:rgba(8,25,46,.9);
+  color:white; font-size:13px;
+  display:flex; gap:10px; align-items:center;
+  padding:10px 14px; z-index:10;
 }
-
-#sdot {
-  width:10px;
-  height:10px;
-  border-radius:50%;
-  background:#ff4444;
+#dot {
+  width:10px; height:10px; border-radius:50%;
+  background:#ff5555;
 }
-#sdot.ready {
-  background:#ffcc00;
-  box-shadow:0 0 6px #ffcc00;
-}
-#sdot.found {
-  background:#00ff88;
-  box-shadow:0 0 8px #00ff88;
-  animation:blink .6s infinite alternate;
-}
-@keyframes blink { to { opacity:.3; } }
-
-#stxt {
-  flex:1;
-  font-size:13px;
-  color:white;
-}
-
-#room-pill {
-  padding:4px 10px;
-  border-radius:18px;
-  background:rgba(0,204,255,0.15);
-  border:1px solid rgba(0,204,255,0.4);
+#dot.found { background:#00ff88; box-shadow:0 0 8px #00ff88 }
+#room {
+  margin-left:auto; font-weight:800; letter-spacing:3px;
   color:#00ccff;
-  letter-spacing:3px;
-  font-weight:800;
-  font-size:12px;
 }
 
-/* ===== CAMERA START PANEL ===== */
-#cam-panel {
-  position:fixed;
-  inset:0;
-  z-index:20;
-  background:rgba(8,25,46,0.95);
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:18px;
+#panel {
+  position:fixed; inset:0;
+  background:rgba(8,25,46,.96);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:15px; z-index:20;
 }
-
-#cam-panel h2 {
-  color:#00ccff;
-  letter-spacing:3px;
-}
-
-#cam-panel p {
-  color:#99bbcc;
-  font-size:14px;
-  text-align:center;
-  line-height:1.6;
-}
-
-.btn {
-  border:none;
+button {
+  border:none; padding:14px 24px;
   border-radius:10px;
-  padding:14px 26px;
-  font-size:16px;
-  font-weight:700;
-  cursor:pointer;
-}
-.btn-blue {
-  background:#00ccff;
-  color:#08192e;
-}
-
-/* ===== CONF BAR ===== */
-#conf {
-  position:fixed;
-  left:14px;
-  right:14px;
-  bottom:12px;
-  height:8px;
-  background:#0a1e36;
-  border-radius:4px;
-  overflow:hidden;
-  z-index:10;
-}
-#conf-fill {
-  height:100%;
-  width:0%;
-  background:#00ff88;
-  transition:width .1s;
+  background:#00ccff; color:#08192e;
+  font-size:16px; font-weight:700;
 }
 </style>
 </head>
@@ -140,174 +54,138 @@ body {
 <video id="vid" autoplay playsinline muted></video>
 <canvas id="oc"></canvas>
 
-<div id="top-bar">
-  <div id="sdot"></div>
-  <div id="stxt">대기 중</div>
-  <div id="room-pill">----</div>
+<div id="top">
+  <div id="dot"></div>
+  <div id="txt">대기 중</div>
+  <div id="room">----</div>
 </div>
 
-<div id="conf"><div id="conf-fill"></div></div>
-
-<!-- CAMERA START -->
-<div id="cam-panel">
-  <h2>📷 CAMERA</h2>
-  <p>
-    버튼을 눌러 카메라를 연결하세요<br>
-    (안드로이드에서는 HTTPS 필요)
+<div id="panel">
+  <h2 style="color:#00ccff">📷 카메라 연결</h2>
+  <p style="color:#99bbcc;text-align:center">
+    흰 보드 위에 퍽을 올려주세요<br>
+    시작 후 보드의 두 모서리를 터치합니다
   </p>
-  <button class="btn btn-blue" onclick="startCameraFromButton()">
-    카메라 연결
-  </button>
+  <button onclick="start()">카메라 시작</button>
 </div>
 
 <script>
-/* =====================================================
-   ROOM CODE (✅ 치명적 오류 수정됨)
-===================================================== */
+/* ================= ROOM ================= */
 const roomCode = Math.random().toString(36).substr(2,4).toUpperCase();
-const roomPill = document.getElementById('room-pill');
-roomPill.textContent = roomCode;
+room.textContent = roomCode;
 
-/* =====================================================
-   OUTPUT (GAME COMPATIBLE)
-===================================================== */
-function sendPos(x, y, confidence) {
-  const payload = {
-    x, y,
-    confidence,
-    ts: Date.now(),
-    room: roomCode
-  };
-
+/* ================= OUTPUT ================= */
+function send(x,y,conf){
+  const p = {x,y,confidence:conf,ts:Date.now(),room:roomCode};
   try {
-    if (!window._bc) {
-      window._bc = new BroadcastChannel('icedash_' + roomCode);
+    if(!window._bc) _bc=new BroadcastChannel('icedash_'+roomCode);
+    _bc.postMessage(p);
+  } catch(e){}
+  try { localStorage.setItem('icedash_pos',JSON.stringify(p)) } catch(e){}
+}
+
+/* ================= CAMERA ================= */
+const vid=document.getElementById('vid');
+const oc=document.getElementById('oc');
+const octx=oc.getContext('2d');
+
+let pc,pctx,PW=240,PH=135;
+let zone=null, taps=[];
+let smoothX=.5, smoothY=.5;
+
+function resize(){
+  oc.width=innerWidth; oc.height=innerHeight;
+}
+resize(); addEventListener('resize',resize);
+
+async function start(){
+  panel.style.display='none';
+  const s=await navigator.mediaDevices.getUserMedia({
+    video:{ facingMode:'environment', width:{ideal:1920}, height:{ideal:1080} }
+  });
+  vid.srcObject=s;
+  await vid.play();
+
+  PH=Math.round(PW*vid.videoHeight/vid.videoWidth);
+  pc=document.createElement('canvas');
+  pc.width=PW; pc.height=PH;
+  pctx=pc.getContext('2d',{willReadFrequently:true});
+
+  txt.textContent='보드 모서리 두 곳을 터치하세요';
+  requestAnimationFrame(loop);
+}
+
+/* ================= ZONE SET ================= */
+oc.addEventListener('pointerdown',e=>{
+  if(zone) return;
+  const r=oc.getBoundingClientRect();
+  taps.push({
+    x:1-(e.clientX-r.left)/r.width,
+    y:(e.clientY-r.top)/r.height
+  });
+  if(taps.length===2){
+    zone={
+      x0:Math.min(taps[0].x,taps[1].x),
+      y0:Math.min(taps[0].y,taps[1].y),
+      x1:Math.max(taps[0].x,taps[1].x),
+      y1:Math.max(taps[0].y,taps[1].y)
     }
-    window._bc.postMessage(payload);
-  } catch(e) {}
-
-  try {
-    localStorage.setItem('icedash_pos', JSON.stringify(payload));
-  } catch(e) {}
-}
-
-/* =====================================================
-   CAMERA SETUP
-===================================================== */
-const vid   = document.getElementById('vid');
-const oc    = document.getElementById('oc');
-const octx  = oc.getContext('2d');
-const sdot  = document.getElementById('sdot');
-const stxt  = document.getElementById('stxt');
-const confF = document.getElementById('conf-fill');
-
-function resize() {
-  oc.width = innerWidth;
-  oc.height = innerHeight;
-}
-resize();
-addEventListener('resize', resize);
-
-/* =====================================================
-   BUTTON → CAMERA START (✅ Android/iOS OK)
-===================================================== */
-async function startCameraFromButton() {
-  document.getElementById('cam-panel').style.display = 'none';
-  await startCam();
-}
-
-async function startCam() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { ideal: 'environment' },
-        width:  { ideal: 1920 },
-        height: { ideal: 1080 }
-      }
-    });
-
-    vid.srcObject = stream;
-    await vid.play();
-
-    sdot.className = 'ready';
-    stxt.textContent = '카메라 연결됨 — 퍽 추적 중';
-
-    initProcessing();
-    requestAnimationFrame(loop);
-
-  } catch (e) {
-    console.error(e);
-    sdot.className = '';
-    stxt.textContent = '카메라 오류: ' + e.name;
-    alert(
-      '카메라를 열 수 없습니다\n\n' +
-      '오류: ' + e.name + '\n\n' +
-      '✔ HTTPS 접속 여부를 확인하세요'
-    );
+    txt.textContent='퍽을 올려주세요';
   }
-}
+});
 
-/* =====================================================
-   PROCESSING (VERY SIMPLE DARK OBJECT TRACKER)
-===================================================== */
-const PW = 240;
-let PH = 135;
-let pc, pctx;
-
-function initProcessing() {
-  PH = Math.round(PW * vid.videoHeight / vid.videoWidth);
-  pc = document.createElement('canvas');
-  pc.width = PW;
-  pc.height = PH;
-  pctx = pc.getContext('2d', { willReadFrequently:true });
-}
-
-let smoothX = 0.5;
-let smoothY = 0.5;
-
-/* =====================================================
-   MAIN LOOP
-===================================================== */
-function loop() {
+/* ================= LOOP ================= */
+function loop(){
   pctx.save();
-  pctx.translate(PW, 0);
-  pctx.scale(-1, 1);
-  pctx.drawImage(vid, 0, 0, PW, PH);
+  pctx.translate(PW,0); pctx.scale(-1,1);
+  pctx.drawImage(vid,0,0,PW,PH);
   pctx.restore();
 
-  const img = pctx.getImageData(0,0,PW,PH).data;
-  let sx=0, sy=0, count=0;
+  if(zone){
+    const d=pctx.getImageData(0,0,PW,PH).data;
+    const sx0=zone.x0*PW|0, sy0=zone.y0*PH|0;
+    const sx1=zone.x1*PW|0, sy1=zone.y1*PH|0;
 
-  for (let i=0; i<img.length; i+=16) {
-    const lum = img[i]*0.299 + img[i+1]*0.587 + img[i+2]*0.114;
-    if (lum < 60) {
-      const p = i/4;
-      sx += p % PW;
-      sy += Math.floor(p / PW);
-      count++;
+    let bSum=0,bCnt=0;
+    for(let y=sy0;y<sy1;y++)
+      for(let x=sx0;x<sx1;x++){
+        const i=(y*PW+x)*4;
+        bSum+=d[i]*.299+d[i+1]*.587+d[i+2]*.114;
+        bCnt++;
+      }
+    const mean=bCnt?bSum/bCnt:200;
+    const th=Math.min(70,mean*.35);
+
+    let sx=0,sy=0,c=0;
+    for(let y=sy0;y<sy1;y++)
+      for(let x=sx0;x<sx1;x++){
+        const i=(y*PW+x)*4;
+        const lum=d[i]*.299+d[i+1]*.587+d[i+2]*.114;
+        const sat=Math.max(d[i],d[i+1],d[i+2]) -
+                   Math.min(d[i],d[i+1],d[i+2]);
+        if(lum<th && sat<60){
+          sx+=x; sy+=y; c++;
+        }
+      }
+
+    const area=(sx1-sx0)*(sy1-sy0);
+    if(c>area*.003 && c<area*.15){
+      const rx=(sx/c-sx0)/(sx1-sx0);
+      const ry=(sy/c-sy0)/(sy1-sy0);
+      smoothX=smoothX*.85+rx*.15;
+      smoothY=smoothY*.85+ry*.15;
+
+      const conf=Math.min(1,c/(area*.05));
+      send(smoothX,smoothY,conf);
+      dot.className='found';
+      txt.textContent=`퍽 추적 중 (${(conf*100)|0}%)`;
+    } else {
+      dot.className='';
     }
-  }
-
-  if (count > 25) {
-    const rx = (sx/count)/PW;
-    const ry = (sy/count)/PH;
-    smoothX = smoothX*0.85 + rx*0.15;
-    smoothY = smoothY*0.85 + ry*0.15;
-
-    const conf = Math.min(1, count / 400);
-    sendPos(smoothX, smoothY, conf);
-
-    confF.style.width = (conf*100).toFixed(0) + '%';
-    sdot.className = 'found';
-    stxt.textContent =
-      `퍽 추적 중 — X ${(smoothX*100).toFixed(0)}% / 신뢰 ${(conf*100).toFixed(0)}%`;
-  } else {
-    confF.style.width = '0%';
   }
 
   requestAnimationFrame(loop);
 }
 </script>
-
 </body>
 </html>
