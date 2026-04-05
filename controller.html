@@ -2,128 +2,428 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ICE DASH — 퍽 추적기</title>
 <style>
-body { margin:0; background:#000; overflow:hidden; }
-#vid, #oc { position:fixed; inset:0; width:100vw; height:100vh; object-fit:cover; transform:scaleX(-1); }
-#ui {
-  position:fixed; top:0; left:0; right:0;
-  background:rgba(8,25,46,.9);
-  color:white;
-  padding:10px;
-  display:flex; gap:10px;
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #000;
+  font-family: 'Helvetica Neue', sans-serif;
+  overflow: hidden;
+  touch-action: none;
+  width: 100vw; height: 100vh;
 }
-#room { margin-left:auto; color:#00ccff; letter-spacing:3px; font-weight:800 }
+#vid {
+  position: fixed; top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  object-fit: cover;
+  transform: scaleX(-1);
+  z-index: 0;
+}
+#oc {
+  position: fixed; top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  transform: scaleX(-1);
+  z-index: 1; touch-action: none;
+}
+#top-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+  background: rgba(8,25,46,0.9);
+  padding: 10px 14px;
+  display: flex; align-items: center; gap: 10px;
+}
+#sdot {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #ff4444; flex-shrink: 0; transition: background .3s;
+}
+#sdot.ready  { background: #ffcc00; box-shadow: 0 0 8px #ffcc00; }
+#sdot.found  { background: #00ff88; box-shadow: 0 0 10px #00ff88; animation: bl .5s infinite alternate; }
+#sdot.lost   { background: #ff4444; }
+@keyframes bl { to { opacity: .3; } }
+#stxt { flex: 1; color: white; font-size: 13px; line-height: 1.4; }
+#room-pill {
+  background: rgba(0,204,255,0.15); border: 1px solid rgba(0,204,255,0.5);
+  border-radius: 20px; padding: 4px 14px;
+  font-size: 14px; font-weight: 900; letter-spacing: 4px; color: #00ccff;
+}
+#fb-status {
+  font-size: 11px; padding: 3px 10px; border-radius: 20px;
+  background: rgba(0,255,136,0.15); color: #00ff88;
+  border: 1px solid rgba(0,255,136,0.3);
+}
+#bottom-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
+  background: rgba(8,25,46,0.9);
+  padding: 10px 14px;
+  display: flex; align-items: center; gap: 10px;
+}
+.btn { font-size: 13px; font-weight: 700; border: none; border-radius: 8px; padding: 9px 14px; cursor: pointer; white-space: nowrap; }
+.btn-red  { background: rgba(255,60,60,0.25); color: #ff8888; border: 1px solid rgba(255,60,60,0.3); }
+.btn-gray { background: rgba(255,255,255,0.1); color: #aabbcc; }
+.conf-wrap { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.conf-lbl  { font-size: 10px; color: #556677; letter-spacing: 1px; text-transform: uppercase; }
+.conf-bg   { background: #0a1e36; border-radius: 4px; height: 10px; overflow: hidden; }
+#puck-bar  { height: 100%; width: 0%; border-radius: 4px; background: #00ff88; transition: width .08s, background .2s; }
+.sens-row  { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #556677; }
+input[type=range] { width: 72px; accent-color: #00ccff; }
+#sens-val  { color: white; font-weight: 700; font-size: 11px; min-width: 24px; }
+#zone-tip {
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 8;
+  background: rgba(0,0,0,0.75); border: 2px solid #ffcc00;
+  border-radius: 16px; padding: 20px 28px;
+  text-align: center; color: white; font-size: 15px; line-height: 1.9;
+  pointer-events: none;
+}
+#zone-tip.hide { display: none; }
+#zone-tip big { font-size: 30px; display: block; margin-bottom: 6px; }
+#dbg-view {
+  display: none; position: fixed; bottom: 62px; left: 8px; z-index: 15;
+  width: 180px; height: 101px;
+  border: 1.5px solid #00ccff; border-radius: 6px;
+  image-rendering: pixelated;
+}
+#dbg-view.show { display: block; }
 </style>
 </head>
-
 <body>
 
 <video id="vid" autoplay playsinline muted></video>
 <canvas id="oc"></canvas>
+<canvas id="dbg-view"></canvas>
 
-<div id="ui">
-  <div id="status">대기 중</div>
-  <div id="room">----</div>
+<div id="top-bar">
+  <div id="sdot"></div>
+  <div id="stxt">카메라 시작 중...</div>
+  <div id="fb-status">Firebase ✓</div>
+  <div id="room-pill">----</div>
 </div>
 
-<script>
-/* ============ ROOM ============ */
-const roomCode = Math.random().toString(36).substr(2,4).toUpperCase();
-document.getElementById('room').textContent = roomCode;
+<div id="zone-tip">
+  <big>✋</big>
+  흰 보드의 모서리 2곳을 터치하세요<br>
+  <small style="color:#aaa;font-size:12px">터치 1: 왼쪽 위 → 터치 2: 오른쪽 아래</small>
+</div>
 
-/* ============ SEND ============ */
-function send(x,y,conf){
-  const p = {x,y,confidence:conf,ts:Date.now(),room:roomCode};
-  if (!window._bc) _bc = new BroadcastChannel('icedash_'+roomCode);
-  _bc.postMessage(p);
+<div id="bottom-bar">
+  <button class="btn btn-red" onclick="resetZone()">영역 재설정</button>
+  <div class="conf-wrap">
+    <div class="conf-lbl">퍽 감지</div>
+    <div class="conf-bg"><div id="puck-bar"></div></div>
+  </div>
+  <div class="sens-row">
+    감도<input type="range" id="sl" min="10" max="100" value="50">
+    <span id="sens-val">50</span>
+  </div>
+  <button class="btn btn-gray" onclick="toggleDbg()">디버그</button>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, set, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+// ── Firebase (하드코딩) ──
+const firebaseConfig = {
+  apiKey: "AIzaSyDkLOUsbcGDTaW3nq3Egn8vJth2tFLf8-w",
+  authDomain: "icedash-90566.firebaseapp.com",
+  databaseURL: "https://icedash-90566-default-rtdb.firebaseio.com",
+  projectId: "icedash-90566",
+  storageBucket: "icedash-90566.firebasestorage.app",
+  messagingSenderId: "639696103978",
+  appId: "1:639696103978:web:9c19e8341ecdbb6f2e7153"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+// ── Room code ──
+// 항상 같은 코드 사용 (게임과 자동 연결)
+const ROOM = 'ICEDASH';
+document.getElementById('room-pill').textContent = ROOM;
+const puckRef = ref(db, 'puck/' + ROOM);
+
+function sendPos(x, y, conf) {
+  set(puckRef, { x, y, confidence: conf, ts: Date.now() }).catch(e => console.warn(e));
 }
 
-/* ============ CAMERA ============ */
-const vid = document.getElementById('vid');
-const oc = document.getElementById('oc');
-const octx = oc.getContext('2d');
+// ── DOM ──
+const vid   = document.getElementById('vid');
+const oc    = document.getElementById('oc');
+const octx  = oc.getContext('2d');
+const dbgCanvas = document.getElementById('dbg-view');
+const dbgCtx    = dbgCanvas.getContext('2d');
+const sdot  = document.getElementById('sdot');
+const stxt  = document.getElementById('stxt');
+const puckBar = document.getElementById('puck-bar');
+const zoneTip = document.getElementById('zone-tip');
+const sl    = document.getElementById('sl');
+const sensVal = document.getElementById('sens-val');
+sl.addEventListener('input', () => { sensVal.textContent = sl.value; });
 
-async function start(){
-  const s = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
-  vid.srcObject = s;
-  await vid.play();
-  oc.width=innerWidth;
-  oc.height=innerHeight;
-  setup();
-  requestAnimationFrame(loop);
-}
-start();
+// ── Processing canvas (16:9 low-res) ──
+const PW = 256, PH = 144;
+const pc   = document.createElement('canvas');
+const pctx = pc.getContext('2d', { willReadFrequently: true });
+pc.width = PW; pc.height = PH;
+dbgCanvas.width = PW; dbgCanvas.height = PH;
 
-/* ============ PROCESSING ============ */
-const PW=240;
-let PH, pc, pctx;
-let zone=null, taps=[];
+// ── Zone ──
+let zone = null;        // { x0,y0,x1,y1 } normalized 0-1
+let tapPts = [];
+let zoneSet = false;
+let smoothX = 0.5, smoothY = 0.5;
+let noDetect = 0;
+let dbgOn = false;
+let running = false;
 
-function setup(){
-  PH = Math.round(PW * vid.videoHeight / vid.videoWidth);
-  pc = document.createElement('canvas');
-  pc.width=PW; pc.height=PH;
-  pctx=pc.getContext('2d',{willReadFrequently:true});
-}
+window.toggleDbg = () => {
+  dbgOn = !dbgOn;
+  dbgCanvas.classList.toggle('show', dbgOn);
+};
+window.resetZone = () => {
+  zone = null; zoneSet = false; tapPts = [];
+  zoneTip.classList.remove('hide');
+  stxt.textContent = '보드 모서리 2곳을 터치해서 영역 설정';
+  sdot.className = 'ready';
+  puckBar.style.width = '0%';
+};
 
-oc.addEventListener('pointerdown',e=>{
-  if(zone) return;
-  const r=oc.getBoundingClientRect();
-  taps.push({
-    x:1-(e.clientX-r.left)/r.width,
-    y:(e.clientY-r.top)/r.height
-  });
-  if(taps.length===2){
-    zone={x0:Math.min(taps[0].x,taps[1].x),
-          y0:Math.min(taps[0].y,taps[1].y),
-          x1:Math.max(taps[0].x,taps[1].x),
-          y1:Math.max(taps[0].y,taps[1].y)};
+// ── Tap to set zone ──
+oc.addEventListener('pointerdown', e => {
+  if (zoneSet) return;
+  e.preventDefault();
+  const rect = oc.getBoundingClientRect();
+  const nx = 1 - (e.clientX - rect.left)  / rect.width;   // mirrored
+  const ny =     (e.clientY - rect.top)   / rect.height;
+  tapPts.push({ nx, ny });
+
+  // Visual feedback
+  flashTap(e.clientX, e.clientY, tapPts.length);
+
+  if (tapPts.length === 1) {
+    stxt.textContent = '✓ 첫 번째 완료! 반대쪽 모서리를 터치하세요';
+  } else if (tapPts.length >= 2) {
+    const p1 = tapPts[0], p2 = tapPts[1];
+    zone = {
+      x0: Math.min(p1.nx, p2.nx) - 0.02,
+      y0: Math.min(p1.ny, p2.ny) - 0.02,
+      x1: Math.max(p1.nx, p2.nx) + 0.02,
+      y1: Math.max(p1.ny, p2.ny) + 0.02,
+    };
+    zone.x0 = Math.max(0, zone.x0); zone.y0 = Math.max(0, zone.y0);
+    zone.x1 = Math.min(1, zone.x1); zone.y1 = Math.min(1, zone.y1);
+    zoneSet = true;
+    zoneTip.classList.add('hide');
+    stxt.textContent = '영역 설정 완료 — 퍽을 보드에 올려주세요';
+    sdot.className = 'ready';
   }
 });
 
-let smoothX=0.5, smoothY=0.5;
+function flashTap(cx, cy, n) {
+  const d = document.createElement('div');
+  d.style.cssText = `position:fixed;left:${cx-22}px;top:${cy-22}px;
+    width:44px;height:44px;border-radius:50%;
+    border:3px solid ${n===1?'#ffcc00':'#00ff88'};
+    z-index:20;pointer-events:none;
+    display:flex;align-items:center;justify-content:center;
+    color:${n===1?'#ffcc00':'#00ff88'};font-weight:900;font-size:16px;
+    animation:fp .6s ease-out forwards;`;
+  d.textContent = n;
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 700);
+}
+const st = document.createElement('style');
+st.textContent = '@keyframes fp{0%{transform:scale(.4);opacity:1}100%{transform:scale(2.2);opacity:0}}';
+document.head.appendChild(st);
 
-function loop(){
+// ── Camera ──
+(async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: 'environment' },
+        width:  { ideal: 1920 }, height: { ideal: 1080 },
+        frameRate: { ideal: 30 }, aspectRatio: { ideal: 16/9 }
+      }
+    });
+    vid.srcObject = stream;
+    await vid.play();
+
+    function resize() { oc.width = window.innerWidth; oc.height = window.innerHeight; }
+    resize();
+    window.addEventListener('resize', resize);
+
+    sdot.className = 'ready';
+    stxt.textContent = '보드 모서리 2곳을 터치해서 영역 설정';
+    running = true;
+    requestAnimationFrame(loop);
+  } catch(e) {
+    stxt.textContent = '카메라 오류: ' + e.message;
+    sdot.className = 'lost';
+  }
+})();
+
+// ── Detection loop ──
+function loop() {
+  if (!running || vid.readyState < 2) { requestAnimationFrame(loop); return; }
+
+  const OW = oc.width, OH = oc.height;
+  octx.clearRect(0, 0, OW, OH);
+
+  // Draw zone box
+  if (zoneSet && zone) {
+    const zsx = (1 - zone.x1) * OW, zsy = zone.y0 * OH;
+    const zsw = (zone.x1 - zone.x0) * OW, zsh = (zone.y1 - zone.y0) * OH;
+    octx.strokeStyle = 'rgba(255,204,0,0.7)';
+    octx.lineWidth = 2.5; octx.setLineDash([10, 6]);
+    octx.strokeRect(zsx, zsy, zsw, zsh);
+    octx.setLineDash([]);
+  }
+
+  // Show tap 1 marker
+  if (tapPts.length === 1 && !zoneSet) {
+    const p = tapPts[0];
+    const tx = (1 - p.nx) * OW, ty = p.ny * OH;
+    octx.strokeStyle = '#ffcc00'; octx.lineWidth = 3;
+    octx.beginPath(); octx.arc(tx, ty, 16, 0, Math.PI*2); octx.stroke();
+    octx.fillStyle = '#ffcc00'; octx.font = 'bold 14px sans-serif';
+    octx.textAlign = 'center'; octx.fillText('1', tx, ty + 5);
+  }
+
+  if (!zoneSet || !zone) { requestAnimationFrame(loop); return; }
+
+  // Draw video to low-res proc canvas (mirrored)
   pctx.save();
-  pctx.translate(PW,0); pctx.scale(-1,1);
-  pctx.drawImage(vid,0,0,PW,PH);
+  pctx.translate(PW, 0); pctx.scale(-1, 1);
+  pctx.drawImage(vid, 0, 0, PW, PH);
   pctx.restore();
 
-  if(zone){
-    const d=pctx.getImageData(0,0,PW,PH).data;
-    const sx0=(zone.x0*PW)|0, sx1=(zone.x1*PW)|0;
-    const sy0=(zone.y0*PH)|0, sy1=(zone.y1*PH)|0;
+  const imgData = pctx.getImageData(0, 0, PW, PH);
+  const d = imgData.data;
 
-    let sum=0,cnt=0;
-    for(let y=sy0;y<sy1;y++)
-      for(let x=sx0;x<sx1;x++){
-        const i=(y*PW+x)*4;
-        sum += d[i]*.299+d[i+1]*.587+d[i+2]*.114;
-        cnt++;
+  // Zone bounds in proc canvas
+  const sx0 = Math.max(0, Math.floor(zone.x0 * PW));
+  const sy0 = Math.max(0, Math.floor(zone.y0 * PH));
+  const sx1 = Math.min(PW, Math.ceil(zone.x1  * PW));
+  const sy1 = Math.min(PH, Math.ceil(zone.y1  * PH));
+
+  // Pass 1: mean brightness inside zone
+  let bSum = 0, bCnt = 0;
+  for (let y = sy0; y < sy1; y++) {
+    for (let x = sx0; x < sx1; x++) {
+      const i = (y * PW + x) * 4;
+      bSum += d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+      bCnt++;
+    }
+  }
+  const meanB = bCnt > 0 ? bSum / bCnt : 200;
+
+  // Adaptive threshold
+  // meanB on white board ~ 180-230, puck ~ 20-60
+  // thresh = min(slider_value, mean * ratio)
+  // ratio tuned so puck (30% of mean) passes, white (100%) doesn't
+  const sliderVal = +sl.value;
+  const adaptThresh = Math.min(sliderVal, meanB * 0.32);
+
+  // Pass 2: find dark pixels inside zone only
+  let sumX = 0, sumY = 0, pCnt = 0;
+  const mask = new Uint8Array(PW * PH);
+
+  for (let y = sy0; y < sy1; y++) {
+    for (let x = sx0; x < sx1; x++) {
+      const i = (y * PW + x) * 4;
+      const lum = d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114;
+      const sat = Math.max(d[i],d[i+1],d[i+2]) - Math.min(d[i],d[i+1],d[i+2]);
+      if (lum < adaptThresh && sat < 60) {
+        mask[y * PW + x] = 1;
+        sumX += x; sumY += y; pCnt++;
       }
-    const mean=sum/cnt;
-    const th=Math.min(70, mean*0.35);
-
-    let sx=0, sy=0, c=0;
-    for(let y=sy0;y<sy1;y++)
-      for(let x=sx0;x<sx1;x++){
-        const i=(y*PW+x)*4;
-        const lum=d[i]*.299+d[i+1]*.587+d[i+2]*.114;
-        if(lum<th){ sx+=x; sy+=y; c++; }
-      }
-
-    if(c>cnt*0.003){
-      smoothX = smoothX*0.85 + ((sx/c - sx0)/(sx1-sx0))*0.15;
-      smoothY = smoothY*0.85 + ((sy/c - sy0)/(sy1-sy0))*0.15;
-      send(smoothX,smoothY,Math.min(1,c/(cnt*0.05)));
     }
   }
 
+  // Debug view
+  if (dbgOn) {
+    const di = dbgCtx.createImageData(PW, PH);
+    for (let p = 0; p < PW * PH; p++) {
+      const x = p % PW, y = Math.floor(p / PW);
+      const inZone = x >= sx0 && x < sx1 && y >= sy0 && y < sy1;
+      let r = 20, g = 20, b = 20;
+      if (inZone)   { r = 210; g = 210; b = 190; }
+      if (mask[p])  { r = 0;   g = 220; b = 255; }
+      di.data[p*4]=r; di.data[p*4+1]=g; di.data[p*4+2]=b; di.data[p*4+3]=255;
+    }
+    dbgCtx.putImageData(di, 0, 0);
+    dbgCtx.strokeStyle='#ffcc00'; dbgCtx.lineWidth=1;
+    dbgCtx.strokeRect(sx0, sy0, sx1-sx0, sy1-sy0);
+    // Show threshold info
+    dbgCtx.fillStyle='rgba(0,0,0,0.7)';
+    dbgCtx.fillRect(0,0,PW,14);
+    dbgCtx.fillStyle='#00ccff'; dbgCtx.font='10px sans-serif';
+    dbgCtx.fillText(`평균:${meanB.toFixed(0)} 임계:${adaptThresh.toFixed(0)} 픽셀:${pCnt}`, 4, 11);
+  }
+
+  // Zone area-based min/max
+  const zArea = (sx1-sx0) * (sy1-sy0);
+  const minPx = Math.max(4, Math.floor(zArea * 0.002));
+  const maxPx = Math.floor(zArea * 0.12);
+
+  if (pCnt >= minPx && pCnt <= maxPx) {
+    const rawX = (sumX / pCnt - sx0) / (sx1 - sx0);
+    const rawY = (sumY / pCnt - sy0) / (sy1 - sy0);
+
+    smoothX = smoothX * 0.82 + rawX * 0.18;
+    smoothY = smoothY * 0.82 + rawY * 0.18;
+    const cx = Math.max(0, Math.min(1, smoothX));
+    const cy = Math.max(0, Math.min(1, smoothY));
+
+    const ideal = (minPx + maxPx) / 2;
+    const conf  = Math.max(0, Math.min(1, 1 - Math.abs(pCnt - ideal) / ideal));
+    const pct   = Math.round(conf * 100);
+
+    puckBar.style.width = pct + '%';
+    puckBar.style.background = pct > 55 ? '#00ff88' : pct > 25 ? '#ffcc00' : '#ff4444';
+
+    // Screen coords (mirror back)
+    const zsx = (1 - zone.x1) * OW, zsy = zone.y0 * OH;
+    const zsw = (zone.x1 - zone.x0) * OW, zsh = (zone.y1 - zone.y0) * OH;
+    const px = zsx + cx * zsw;
+    const py = zsy + cy * zsh;
+    const estR = Math.max(18, Math.sqrt(pCnt / Math.PI) * (OW / PW) * 0.55);
+
+    octx.strokeStyle = '#00ff88'; octx.lineWidth = 3;
+    octx.beginPath(); octx.arc(px, py, estR, 0, Math.PI*2); octx.stroke();
+
+    octx.strokeStyle = `rgba(0,255,136,${0.18 + conf*0.5})`;
+    octx.lineWidth = 5;
+    octx.beginPath(); octx.arc(px, py, estR+18, 0, Math.PI*2); octx.stroke();
+
+    const g2 = estR+5, arm = estR+32;
+    octx.strokeStyle = 'rgba(0,255,136,0.9)'; octx.lineWidth = 2;
+    [[px-arm,py,px-g2,py],[px+g2,py,px+arm,py],[px,py-arm,px,py-g2],[px,py+g2,px,py+arm]]
+      .forEach(([x1,y1,x2,y2])=>{ octx.beginPath();octx.moveTo(x1,y1);octx.lineTo(x2,y2);octx.stroke(); });
+
+    octx.fillStyle='rgba(0,0,0,0.65)'; octx.fillRect(px+estR+6,py-20,108,40);
+    octx.fillStyle='#00ff88'; octx.font='bold 13px sans-serif'; octx.textAlign='left';
+    octx.fillText(`퍽 ${pct}%`, px+estR+11, py-4);
+    octx.fillStyle='#88ffcc'; octx.font='11px sans-serif';
+    octx.fillText(`X:${(cx*100).toFixed(0)}% Y:${(cy*100).toFixed(0)}%`, px+estR+11, py+14);
+
+    sendPos(cx, cy, conf);
+    noDetect = 0;
+    sdot.className = 'found';
+    stxt.textContent = `퍽 추적 중 ✓  X:${(cx*100).toFixed(0)}%  신뢰:${pct}%`;
+  } else {
+    noDetect++;
+    puckBar.style.width = '0%';
+    if (noDetect > 10) {
+      sdot.className = 'lost';
+      stxt.textContent = pCnt < minPx
+        ? `퍽 못 찾음 (${pCnt}px) — 감도↑ 또는 디버그로 확인`
+        : `오탐 많음 (${pCnt}px) — 감도↓`;
+    }
+  }
   requestAnimationFrame(loop);
 }
 </script>
-
 </body>
 </html>
