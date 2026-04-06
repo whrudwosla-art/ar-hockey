@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ICE DASH — 퍽 추적기 v7</title>
+<title>ICE DASH — 퍽 추적기 v8</title>
 <style>
 *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
 body { background:#000; font-family:'Helvetica Neue',sans-serif; overflow:hidden; touch-action:none; width:100vw; height:100vh; }
@@ -11,7 +11,7 @@ body { background:#000; font-family:'Helvetica Neue',sans-serif; overflow:hidden
 #oc  { position:fixed; top:0; left:0; width:100vw; height:100vh; transform:scaleX(-1); z-index:1; touch-action:none; }
 
 #hud { position:fixed; top:0; left:0; right:0; z-index:10; background:rgba(8,25,46,0.92); padding:10px 14px; display:flex; align-items:center; gap:10px; }
-#sdot { width:12px; height:12px; border-radius:50%; background:#ff4444; flex-shrink:0; transition:background .2s; }
+#sdot { width:12px; height:12px; border-radius:50%; background:#ff4444; flex-shrink:0; transition:background .15s; }
 #sdot.ready { background:#ffcc00; box-shadow:0 0 8px #ffcc00; }
 #sdot.found { background:#00ff88; box-shadow:0 0 10px #00ff88; animation:bl .4s infinite alternate; }
 #sdot.lost  { background:#ff6644; }
@@ -19,33 +19,44 @@ body { background:#000; font-family:'Helvetica Neue',sans-serif; overflow:hidden
 #stxt { flex:1; color:white; font-size:12px; line-height:1.4; }
 #room-pill { background:rgba(0,204,255,0.15); border:1px solid rgba(0,204,255,0.5); border-radius:20px; padding:4px 12px; font-size:13px; font-weight:900; letter-spacing:4px; color:#00ccff; }
 
-#btm { position:fixed; bottom:0; left:0; right:0; z-index:10; background:rgba(8,25,46,0.92); padding:10px 14px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+#btm { position:fixed; bottom:0; left:0; right:0; z-index:10; background:rgba(8,25,46,0.92); padding:10px 14px; display:flex; align-items:center; gap:8px; }
 .btn { font-size:12px; font-weight:700; border:none; border-radius:8px; padding:8px 11px; cursor:pointer; white-space:nowrap; }
 .bY { background:#ffcc00; color:#1a1000; }
 .bR { background:rgba(255,60,60,0.25); color:#ff8888; border:1px solid rgba(255,60,60,0.3); }
 .bG { background:rgba(255,255,255,0.1); color:#aabbcc; }
-
+.bB { background:rgba(0,204,255,0.2); color:#00ccff; border:1px solid rgba(0,204,255,0.3); }
 #bars { flex:1; min-width:80px; display:flex; flex-direction:column; gap:3px; }
 .blbl { font-size:10px; color:#556677; letter-spacing:1px; }
 .bbg  { background:#0a1e36; border-radius:4px; height:7px; overflow:hidden; }
-.bfill { height:100%; width:0%; border-radius:4px; transition:width .05s; }
+.bfill { height:100%; width:0%; border-radius:4px; transition:width .04s; }
 #cbar { background:#00ff88; }
-#rcbar{ background:#00ccff; }
+#rcbar { background:#00ccff; }
 
 #zone-tip { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:8; background:rgba(0,0,0,0.82); border:2px solid #ffcc00; border-radius:16px; padding:20px 28px; text-align:center; color:white; font-size:14px; line-height:2; pointer-events:none; }
 #zone-tip.hide { display:none; }
 #zone-tip big { font-size:28px; display:block; margin-bottom:4px; }
 
-#cal { position:fixed; inset:0; z-index:20; background:rgba(0,0,0,0.78); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; text-align:center; color:white; }
+#cal { position:fixed; inset:0; z-index:20; background:rgba(0,0,0,0.8); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; text-align:center; color:white; }
 #cal.hide { display:none; }
 #cal-n { font-size:80px; font-weight:900; color:#ffcc00; line-height:1; }
 #cal-msg { font-size:15px; color:#99bbcc; line-height:1.8; }
 
-/* Debug: shows blob analysis */
+/* Mirror test overlay */
+#mirror-test { position:fixed; inset:0; z-index:25; background:rgba(0,0,0,0.85); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; text-align:center; color:white; padding:30px; }
+#mirror-test.hide { display:none; }
+#mirror-test h2 { font-size:20px; color:#ffcc00; }
+#mirror-test p { font-size:14px; color:#99bbcc; line-height:1.8; }
+.mirror-btns { display:flex; gap:12px; }
+.mbtn { font-size:15px; font-weight:700; padding:12px 24px; border:none; border-radius:10px; cursor:pointer; }
+
 #dbg { display:none; position:fixed; bottom:62px; left:8px; z-index:15; width:200px; height:112px; border:1.5px solid #00ccff; border-radius:6px; image-rendering:pixelated; }
 #dbg.show { display:block; }
-#dbg-txt { display:none; position:fixed; bottom:178px; left:8px; z-index:15; background:rgba(0,0,0,0.85); border-radius:6px; padding:5px 9px; font-size:10px; color:#00ccff; font-family:monospace; line-height:1.6; white-space:pre; }
+#dbg-txt { display:none; position:fixed; bottom:178px; left:8px; z-index:15; background:rgba(0,0,0,0.88); border-radius:6px; padding:5px 9px; font-size:10px; color:#00ccff; font-family:monospace; line-height:1.6; white-space:pre; }
 #dbg-txt.show { display:block; }
+
+/* Direction indicator */
+#dir-arrow { position:fixed; top:50%; right:20px; transform:translateY(-50%); z-index:8; display:none; font-size:48px; opacity:0; transition:opacity .1s; pointer-events:none; }
+#dir-arrow.show { display:block; opacity:1; }
 </style>
 </head>
 <body>
@@ -53,12 +64,23 @@ body { background:#000; font-family:'Helvetica Neue',sans-serif; overflow:hidden
 <canvas id="oc"></canvas>
 <canvas id="dbg"></canvas>
 <div id="dbg-txt"></div>
+<div id="dir-arrow"></div>
 
 <div id="zone-tip"><big>✋</big>흰 보드 모서리 2곳을 터치하세요<br><small style="color:#aaa;font-size:12px">터치 1 → 터치 2 (반대 모서리)</small></div>
 
 <div id="cal" class="hide">
   <div id="cal-msg"><b>퍽과 스틱을 보드에서 치워주세요</b><br>배경을 학습합니다</div>
   <div id="cal-n">3</div>
+</div>
+
+<!-- Mirror direction test -->
+<div id="mirror-test" class="hide">
+  <h2>🔄 좌우 방향 확인</h2>
+  <p>퍽을 <b>오른쪽</b>으로 움직여 보세요<br>게임 캐릭터가 어느 방향으로 움직이나요?</p>
+  <div class="mirror-btns">
+    <button class="mbtn" style="background:#00ff88;color:#08192e" onclick="setMirror(false)">✅ 오른쪽으로 맞게 감</button>
+    <button class="mbtn" style="background:#ff6644;color:white"  onclick="setMirror(true)">❌ 반대로 가요 (반전 필요)</button>
+  </div>
 </div>
 
 <div id="hud">
@@ -73,9 +95,10 @@ body { background:#000; font-family:'Helvetica Neue',sans-serif; overflow:hidden
   <div id="bars">
     <div class="blbl">감지 신뢰도</div>
     <div class="bbg"><div class="bfill" id="cbar"></div></div>
-    <div class="blbl">원형도 (퍽 vs 스틱)</div>
+    <div class="blbl">원형도</div>
     <div class="bbg"><div class="bfill" id="rcbar"></div></div>
   </div>
+  <button class="btn bB" onclick="showMirrorTest()">↔ 방향확인</button>
   <button class="btn bG" onclick="toggleDbg()">디버그</button>
 </div>
 
@@ -93,14 +116,29 @@ const app = initializeApp({
   appId:"1:639696103978:web:9c19e8341ecdbb6f2e7153"
 });
 const db = getDatabase(app);
-const puckRef = ref(db, 'puck/ICEDASH');
+const puckRef = ref(db,'puck/ICEDASH');
 let lastSend = 0;
 function sendPos(x, y, conf) {
   const now = Date.now();
   if (now - lastSend < 16) return;
   lastSend = now;
-  set(puckRef, { x, y, confidence: conf, ts: now }).catch(()=>{});
+  set(puckRef,{x,y,confidence:conf,ts:now}).catch(()=>{});
 }
+
+// ── Mirror / direction ──
+// false = normal (puck right → game right)
+// true  = flip   (puck right → game left)
+let flipX = localStorage.getItem('flipX') === 'true';
+
+window.showMirrorTest = () => {
+  document.getElementById('mirror-test').classList.remove('hide');
+};
+window.setMirror = (flip) => {
+  flipX = flip;
+  localStorage.setItem('flipX', flip);
+  document.getElementById('mirror-test').classList.add('hide');
+  stxt.textContent = `방향 설정 완료 (${flip?'반전됨':'정방향'}) — 게임 플레이 가능!`;
+};
 
 // ── DOM ──
 const vid=document.getElementById('vid');
@@ -113,6 +151,7 @@ const sdot=document.getElementById('sdot');
 const stxt=document.getElementById('stxt');
 const cbar=document.getElementById('cbar');
 const rcbar=document.getElementById('rcbar');
+const dirArrow=document.getElementById('dir-arrow');
 const zoneTip=document.getElementById('zone-tip');
 const calEl=document.getElementById('cal');
 const calN=document.getElementById('cal-n');
@@ -127,17 +166,20 @@ dbgC.width=PW; dbgC.height=PH;
 let running=false, dbgOn=false;
 let zone=null, zoneSet=false, tapPts=[];
 let bgData=null, bgReady=false;
-let smoothX=0.5, smoothY=0.5;
-let prevX=-1, prevY=-1;
-let noDetect=0;
 
-window.toggleDbg=()=>{
-  dbgOn=!dbgOn;
-  dbgC.classList.toggle('show',dbgOn);
-  dbgTxt.classList.toggle('show',dbgOn);
-};
+// Smooth position
+let smoothX=0.5, smoothY=0.5;
+// Previous puck center in PROC coords (for ghost erasing)
+let prevBlobX=-1, prevBlobY=-1, prevBlobR=0;
+// Previous normalized output (for direction arrow)
+let prevOutputX=0.5;
+let noDetect=0;
+let dirTimer=null;
+
+window.toggleDbg=()=>{ dbgOn=!dbgOn; dbgC.classList.toggle('show',dbgOn); dbgTxt.classList.toggle('show',dbgOn); };
 window.resetZone=()=>{
-  zone=null;zoneSet=false;tapPts=[];bgReady=false;bgData=null;prevX=-1;prevY=-1;
+  zone=null;zoneSet=false;tapPts=[];bgReady=false;bgData=null;
+  prevBlobX=-1;prevBlobY=-1;prevBlobR=0;
   zoneTip.classList.remove('hide');
   stxt.textContent='보드 모서리 2곳을 터치해서 영역 설정';
   sdot.className='ready'; cbar.style.width='0%'; rcbar.style.width='0%';
@@ -147,11 +189,14 @@ window.resetZone=()=>{
 oc.addEventListener('pointerdown',e=>{
   if(zoneSet)return; e.preventDefault();
   const r=oc.getBoundingClientRect();
-  const nx=1-(e.clientX-r.left)/r.width, ny=(e.clientY-r.top)/r.height;
+  // NOTE: oc is CSS-mirrored (scaleX(-1)), so pointer x is already in "real world" coords
+  // We store normalized x WITHOUT flipping here — flip is applied at output only
+  const nx=1-(e.clientX-r.left)/r.width;
+  const ny=(e.clientY-r.top)/r.height;
   tapPts.push({nx,ny}); flash(e.clientX,e.clientY,tapPts.length);
   if(tapPts.length===1){
     stxt.textContent='✓ 반대쪽 모서리를 터치하세요';
-  }else if(tapPts.length>=2){
+  } else if(tapPts.length>=2){
     const p1=tapPts[0],p2=tapPts[1];
     zone={
       x0:Math.max(0,Math.min(p1.nx,p2.nx)-0.02),
@@ -174,7 +219,7 @@ document.head.appendChild(st);
 // ── Calibration ──
 window.startCal=()=>{
   if(!zoneSet){stxt.textContent='먼저 영역을 설정하세요';return;}
-  bgReady=false; prevX=-1; prevY=-1;
+  bgReady=false; prevBlobX=-1; prevBlobY=-1;
   calEl.classList.remove('hide');
   let c=3; calN.textContent=c;
   const iv=setInterval(()=>{ c--; calN.textContent=c; if(c<=0){clearInterval(iv);captureBg();} },1000);
@@ -194,8 +239,10 @@ function captureBg(){
       bgData=new Float32Array(PW*PH);
       for(let i=0;i<PW*PH;i++){let s=0;frames.forEach(f=>s+=f[i]);bgData[i]=s/frames.length;}
       bgReady=true; calEl.classList.add('hide');
-      stxt.textContent='배경 학습 완료 ✓ — 퍽을 올려주세요 (스틱 사용 가능)';
+      stxt.textContent='배경 학습 완료 ✓ — 퍽을 올리고 스틱으로 움직여 보세요!';
       sdot.className='ready';
+      // Show mirror test after calibration
+      setTimeout(()=>{ if(zoneSet&&bgReady) showMirrorTest(); }, 800);
     }
   }
   grab();
@@ -216,116 +263,94 @@ function captureBg(){
   }catch(e){stxt.textContent='카메라 오류: '+e.message;sdot.className='lost';}
 })();
 
-// ──────────────────────────────────────────────
-// CONNECTED COMPONENTS (2-pass union-find)
-// Finds individual dark blobs and analyzes each one
-// This is the KEY to separating puck from stick
-// ──────────────────────────────────────────────
-function findBlobs(mask, w, h, x0, y0, x1, y1) {
-  // Label array
-  const labels = new Int32Array(w * h);
-  const parent = [];
-
-  function find(x) {
-    while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }
-    return x;
-  }
-  function union(a, b) {
-    a = find(a); b = find(b);
-    if (a !== b) parent[a] = b;
-  }
-
-  let nextLabel = 1;
-
-  // Pass 1: assign provisional labels
-  for (let y = y0; y < y1; y++) {
-    for (let x = x0; x < x1; x++) {
-      const i = y * w + x;
-      if (!mask[i]) continue;
-      const top  = y > y0 ? labels[(y-1)*w+x] : 0;
-      const left = x > x0 ? labels[y*w+(x-1)] : 0;
-      if (!top && !left) {
-        labels[i] = nextLabel;
-        parent.push(nextLabel); // parent[nextLabel] = nextLabel
-        nextLabel++;
-      } else if (top && !left) {
-        labels[i] = top;
-      } else if (!top && left) {
-        labels[i] = left;
-      } else {
-        labels[i] = Math.min(top, left);
-        if (top !== left) union(top, left);
-      }
+// ── Connected components (fast 2-pass) ──
+function findBlobs(mask,w,h,x0,y0,x1,y1){
+  const labels=new Int32Array(w*h);
+  const parent=[];
+  function find(x){while(parent[x]!==x){parent[x]=parent[parent[x]];x=parent[x];}return x;}
+  function union(a,b){a=find(a);b=find(b);if(a!==b)parent[a]=b;}
+  let next=1;
+  for(let y=y0;y<y1;y++){
+    for(let x=x0;x<x1;x++){
+      const i=y*w+x;
+      if(!mask[i])continue;
+      const top=y>y0?labels[(y-1)*w+x]:0;
+      const left=x>x0?labels[y*w+(x-1)]:0;
+      if(!top&&!left){labels[i]=next;parent.push(next);next++;}
+      else if(top&&!left){labels[i]=top;}
+      else if(!top&&left){labels[i]=left;}
+      else{labels[i]=Math.min(top,left);if(top!==left)union(top,left);}
     }
   }
-
-  // Pass 2: resolve labels and collect blob stats
-  const blobs = new Map(); // root → {sumX,sumY,cnt,minX,maxX,minY,maxY}
-  for (let y = y0; y < y1; y++) {
-    for (let x = x0; x < x1; x++) {
-      const i = y * w + x;
-      if (!labels[i]) continue;
-      const root = find(labels[i]);
-      labels[i] = root;
-      if (!blobs.has(root)) blobs.set(root, {sumX:0,sumY:0,cnt:0,minX:w,maxX:0,minY:h,maxY:0});
-      const b = blobs.get(root);
-      b.sumX+=x; b.sumY+=y; b.cnt++;
-      if(x<b.minX)b.minX=x; if(x>b.maxX)b.maxX=x;
-      if(y<b.minY)b.minY=y; if(y>b.maxY)b.maxY=y;
+  const blobs=new Map();
+  for(let y=y0;y<y1;y++){
+    for(let x=x0;x<x1;x++){
+      const i=y*w+x;
+      if(!labels[i])continue;
+      const root=find(labels[i]); labels[i]=root;
+      if(!blobs.has(root))blobs.set(root,{sumX:0,sumY:0,cnt:0,minX:w,maxX:0,minY:h,maxY:0});
+      const b=blobs.get(root);
+      b.sumX+=x;b.sumY+=y;b.cnt++;
+      if(x<b.minX)b.minX=x;if(x>b.maxX)b.maxX=x;
+      if(y<b.minY)b.minY=y;if(y>b.maxY)b.maxY=y;
     }
   }
-
-  // Convert to array and compute circularity for each blob
-  const result = [];
-  blobs.forEach(b => {
-    const bW = b.maxX - b.minX + 1;
-    const bH = b.maxY - b.minY + 1;
-    // Aspect ratio: 1.0 = perfect square/circle, 0 = very elongated (stick)
-    const aspect = Math.min(bW, bH) / Math.max(bW, bH);
-    // Fill ratio: circle fills ~0.785 of bounding box
-    const fill = b.cnt / (bW * bH);
-    // Combined circularity score
-    const circularity = aspect * 0.5 + Math.min(1, fill / 0.785) * 0.5;
-    result.push({
-      cx: b.sumX / b.cnt,
-      cy: b.sumY / b.cnt,
-      cnt: b.cnt,
-      bW, bH,
-      aspect,
-      fill,
-      circularity,
-      minX: b.minX, maxX: b.maxX, minY: b.minY, maxY: b.maxY,
-    });
+  return Array.from(blobs.values()).map(b=>{
+    const bW=b.maxX-b.minX+1,bH=b.maxY-b.minY+1;
+    const asp=Math.min(bW,bH)/Math.max(bW,bH);
+    const fill=b.cnt/(bW*bH);
+    const circularity=asp*.5+Math.min(1,fill/.785)*.5;
+    return {cx:b.sumX/b.cnt,cy:b.sumY/b.cnt,cnt:b.cnt,bW,bH,circularity,
+            minX:b.minX,maxX:b.maxX,minY:b.minY,maxY:b.maxY};
   });
-
-  return result;
 }
 
-// ── Main loop ──
+// ── Ghost eraser ──
+// When puck moves, aggressively update bg at OLD position
+// so it stops being detected there
+function eraseGhost(blobX, blobY, blobR, d){
+  // Erase circle around previous blob center
+  const r=Math.ceil(blobR*1.5);
+  const ex0=Math.max(0,Math.floor(blobX-r));
+  const ey0=Math.max(0,Math.floor(blobY-r));
+  const ex1=Math.min(PW,Math.ceil(blobX+r));
+  const ey1=Math.min(PH,Math.ceil(blobY+r));
+  const r2=r*r;
+  for(let y=ey0;y<ey1;y++){
+    for(let x=ex0;x<ex1;x++){
+      const dx=x-blobX, dy=y-blobY;
+      if(dx*dx+dy*dy>r2) continue;
+      const i=y*PW+x, idx=i*4;
+      const lum=d[idx]*.299+d[idx+1]*.587+d[idx+2]*.114;
+      // Aggressive: blend 50% toward current frame at old position
+      bgData[i]=bgData[i]*.50+lum*.50;
+    }
+  }
+}
+
+// ── Main detection loop ──
 function loop(){
   if(!running||vid.readyState<2){requestAnimationFrame(loop);return;}
 
-  const OW=oc.width, OH=oc.height;
+  const OW=oc.width,OH=oc.height;
   octx.clearRect(0,0,OW,OH);
 
-  // Zone box
   if(zoneSet&&zone){
     const zsx=(1-zone.x1)*OW,zsy=zone.y0*OH;
     const zsw=(zone.x1-zone.x0)*OW,zsh=(zone.y1-zone.y0)*OH;
-    octx.strokeStyle='rgba(255,204,0,0.45)'; octx.lineWidth=2; octx.setLineDash([10,6]);
-    octx.strokeRect(zsx,zsy,zsw,zsh); octx.setLineDash([]);
+    octx.strokeStyle='rgba(255,204,0,0.45)';octx.lineWidth=2;octx.setLineDash([10,6]);
+    octx.strokeRect(zsx,zsy,zsw,zsh);octx.setLineDash([]);
   }
   if(tapPts.length===1&&!zoneSet){
     const p=tapPts[0],tx=(1-p.nx)*OW,ty=p.ny*OH;
-    octx.strokeStyle='#ffcc00'; octx.lineWidth=3;
+    octx.strokeStyle='#ffcc00';octx.lineWidth=3;
     octx.beginPath();octx.arc(tx,ty,16,0,Math.PI*2);octx.stroke();
-    octx.fillStyle='#ffcc00'; octx.font='bold 14px sans-serif'; octx.textAlign='center';
-    octx.fillText('1',tx,ty+5);
+    octx.fillStyle='#ffcc00';octx.font='bold 14px sans-serif';octx.textAlign='center';octx.fillText('1',tx,ty+5);
   }
 
   if(!zoneSet||!zone||!bgReady){requestAnimationFrame(loop);return;}
 
-  // Draw frame to proc canvas
+  // Draw mirrored frame to proc canvas
   pctx.save(); pctx.translate(PW,0); pctx.scale(-1,1);
   pctx.drawImage(vid,0,0,PW,PH); pctx.restore();
   const id=pctx.getImageData(0,0,PW,PH);
@@ -337,7 +362,7 @@ function loop(){
   const sy1=Math.min(PH,Math.ceil(zone.y1*PH));
   const zW=sx1-sx0, zH=sy1-sy0;
 
-  // Background subtraction → binary mask
+  // Background subtraction
   let maxDiff=0;
   const diff=new Float32Array(PW*PH);
   for(let y=sy0;y<sy1;y++){
@@ -356,11 +381,11 @@ function loop(){
   for(let y=sy0;y<sy1;y++){
     for(let x=sx0;x<sx1;x++){
       const i=y*PW+x;
-      if(diff[i]>=thresh) mask[i]=1;
+      if(diff[i]>=thresh)mask[i]=1;
     }
   }
 
-  // Background slow drift update
+  // Slow background drift for non-puck pixels
   for(let y=sy0;y<sy1;y++){
     for(let x=sx0;x<sx1;x++){
       const i=y*PW+x;
@@ -372,102 +397,102 @@ function loop(){
     }
   }
 
-  // ── CONNECTED COMPONENTS: find all blobs ──
-  const zoneArea = zW * zH;
-  const minPx = Math.max(2, Math.floor(zoneArea * 0.0008)); // 0.08% of zone
-  const maxPx = Math.floor(zoneArea * 0.10);               // 10% of zone
+  // Connected components
+  const zArea=zW*zH;
+  const minPx=Math.max(2,Math.floor(zArea*.0008));
+  const maxPx=Math.floor(zArea*.12);
+  const blobs=findBlobs(mask,PW,PH,sx0,sy0,sx1,sy1);
+  const candidates=blobs.filter(b=>b.cnt>=minPx&&b.cnt<=maxPx);
 
-  const blobs = findBlobs(mask, PW, PH, sx0, sy0, sx1, sy1);
-
-  // ── BLOB SELECTION: pick the most puck-like blob ──
-  // Filter by size, then score by circularity + proximity to last known position
-  const candidates = blobs.filter(b => b.cnt >= minPx && b.cnt <= maxPx);
-
-  let best = null, bestScore = -1;
-  const hasPrev = prevX >= 0 && prevY >= 0;
-
-  candidates.forEach(b => {
-    // Circularity score (0-1, higher = more puck-like)
-    // Puck: ~0.7-0.9, Stick blade: ~0.1-0.3
-    const circScore = b.circularity;
-
-    // Proximity score: prefer blob near last known position
-    let proxScore = 0.5;
-    if (hasPrev) {
-      const dist = Math.sqrt((b.cx-prevX)**2 + (b.cy-prevY)**2);
-      const maxDist = Math.max(zW, zH) * 0.5;
-      proxScore = Math.max(0, 1 - dist/maxDist);
+  // Pick best (most circular + closest to previous position)
+  const hasPrev=prevBlobX>=0&&prevBlobY>=0;
+  let best=null, bestScore=-1;
+  candidates.forEach(b=>{
+    const circScore=b.circularity;
+    let proxScore=0.5;
+    if(hasPrev){
+      const dist=Math.sqrt((b.cx-prevBlobX)**2+(b.cy-prevBlobY)**2);
+      proxScore=Math.max(0,1-dist/(Math.max(zW,zH)*.5));
     }
-
-    // Size score: prefer blobs closer to expected puck size
-    const idealPx = Math.min(maxPx, Math.max(minPx, zoneArea * 0.003));
-    const sizeScore = Math.max(0, 1 - Math.abs(b.cnt - idealPx) / idealPx);
-
-    // Combined: heavily weight circularity to reject sticks
-    const score = circScore * 0.60 + proxScore * 0.25 + sizeScore * 0.15;
-
-    if (score > bestScore && circScore >= 0.30) {
-      bestScore = score; best = b;
-    }
+    const idealPx=Math.min(maxPx,Math.max(minPx,zArea*.003));
+    const sizeScore=Math.max(0,1-Math.abs(b.cnt-idealPx)/idealPx);
+    const score=circScore*.60+proxScore*.25+sizeScore*.15;
+    if(score>bestScore&&circScore>=0.28){bestScore=score;best=b;}
   });
 
   // Debug view
-  if (dbgOn) {
-    const di = dbgX.createImageData(PW, PH);
-    for (let p = 0; p < PW*PH; p++) {
+  if(dbgOn){
+    const di=dbgX.createImageData(PW,PH);
+    for(let p=0;p<PW*PH;p++){
       const x=p%PW,y=Math.floor(p/PW);
       const inZ=x>=sx0&&x<sx1&&y>=sy0&&y<sy1;
       const heat=Math.min(255,(diff[p]/Math.max(1,maxDiff))*255);
       let r=0,g=0,b2=0;
       if(!inZ){r=8;g=8;b2=8;}
-      else if(mask[p]){
-        // Color blobs differently: best=green, others=orange, rejected=red
-        r=180; g=60; b2=20; // orange default
-      } else {
-        r=Math.floor(heat*.3); g=0; b2=Math.floor(heat*.15)+20;
-      }
-      di.data[p*4]=r; di.data[p*4+1]=g; di.data[p*4+2]=b2; di.data[p*4+3]=255;
+      else if(mask[p]){r=180;g=60;b2=20;}
+      else{r=Math.floor(heat*.3);g=0;b2=20;}
+      di.data[p*4]=r;di.data[p*4+1]=g;di.data[p*4+2]=b2;di.data[p*4+3]=255;
     }
-    // Color best blob cyan
     if(best){
       for(let y=best.minY;y<=best.maxY;y++){
         for(let x=best.minX;x<=best.maxX;x++){
-          const i=y*PW+x;
-          if(mask[i]){di.data[i*4]=0;di.data[i*4+1]=220;di.data[i*4+2]=255;}
+          if(mask[y*PW+x]){di.data[(y*PW+x)*4]=0;di.data[(y*PW+x)*4+1]=220;di.data[(y*PW+x)*4+2]=255;}
         }
       }
     }
     dbgX.putImageData(di,0,0);
-    dbgX.strokeStyle='#ffcc00';dbgX.lineWidth=1;
-    dbgX.strokeRect(sx0,sy0,zW,zH);
-    if(best){
-      dbgX.strokeStyle='#00ff88';dbgX.lineWidth=1;
-      dbgX.strokeRect(best.minX,best.minY,best.bW,best.bH);
-    }
-    // Stats
-    const topCandidates=candidates.slice(0,3).map(b=>`px:${b.cnt} circ:${(b.circularity*100).toFixed(0)}%`).join(' | ');
+    dbgX.strokeStyle='#ffcc00';dbgX.lineWidth=1;dbgX.strokeRect(sx0,sy0,zW,zH);
+    if(best){dbgX.strokeStyle='#00ff88';dbgX.lineWidth=1;dbgX.strokeRect(best.minX,best.minY,best.bW,best.bH);}
     dbgTxt.textContent=
-      `블롭수:${blobs.length} 후보:${candidates.length}\n`+
-      `임계:${thresh.toFixed(0)} maxDiff:${maxDiff.toFixed(0)}\n`+
-      `${topCandidates||'후보없음'}`;
+      `블롭:${blobs.length} 후보:${candidates.length} thr:${thresh.toFixed(0)}\n`+
+      `maxDiff:${maxDiff.toFixed(0)} flipX:${flipX}\n`+
+      (best?`best circ:${(best.circularity*100).toFixed(0)}% px:${best.cnt}`:'best:없음');
   }
 
   if(best){
-    const rawX = (best.cx - sx0) / zW;
-    const rawY = (best.cy - sy0) / zH;
+    // ── GHOST ERASE: force-update background at PREVIOUS position ──
+    // This is the KEY fix: when puck moves, old position stops being detected
+    if(hasPrev){
+      const moved=Math.sqrt((best.cx-prevBlobX)**2+(best.cy-prevBlobY)**2);
+      if(moved>1.5){ // puck actually moved
+        eraseGhost(prevBlobX,prevBlobY,prevBlobR,d);
+      }
+    }
 
-    const alpha = hasPrev ? 0.75 : 0.45;
-    smoothX = smoothX*(1-alpha) + rawX*alpha;
-    smoothY = smoothY*(1-alpha) + rawY*alpha;
-    const cx = Math.max(0,Math.min(1,smoothX));
-    const cy = Math.max(0,Math.min(1,smoothY));
+    // Raw normalized position within zone (0=left, 1=right in camera coords)
+    const rawX=(best.cx-sx0)/zW;
+    const rawY=(best.cy-sy0)/zH;
 
-    prevX = Math.round(best.cx);
-    prevY = Math.round(best.cy);
+    // Apply flip if needed
+    // rawX: 0=left side of camera, 1=right side of camera
+    // Since video is mirrored for display, rawX is already in "real world" coords
+    // flipX=true means user said it was going the wrong way → invert
+    const outX = flipX ? (1-rawX) : rawX;
+    const outY = rawY;
 
-    const conf = best.circularity * 0.65 + Math.min(1,bestScore) * 0.35;
-    const pct  = Math.round(conf*100);
-    const circPct = Math.round(best.circularity*100);
+    // High alpha = very fast response
+    smoothX=smoothX*.25+outX*.75;
+    smoothY=smoothY*.25+outY*.75;
+    const cx=Math.max(0,Math.min(1,smoothX));
+    const cy=Math.max(0,Math.min(1,smoothY));
+
+    // Direction arrow
+    const dx=cx-prevOutputX;
+    if(Math.abs(dx)>0.01){
+      dirArrow.textContent=dx>0?'→':'←';
+      dirArrow.classList.add('show');
+      clearTimeout(dirTimer);
+      dirTimer=setTimeout(()=>dirArrow.classList.remove('show'),400);
+    }
+    prevOutputX=cx;
+
+    // Update blob tracking
+    prevBlobX=best.cx; prevBlobY=best.cy;
+    prevBlobR=Math.sqrt(best.cnt/Math.PI);
+
+    const conf=best.circularity*.65+Math.min(1,bestScore)*.35;
+    const pct=Math.round(conf*100);
+    const circPct=Math.round(best.circularity*100);
 
     cbar.style.width=pct+'%';
     cbar.style.background=pct>55?'#00ff88':pct>30?'#ffcc00':'#ff4444';
@@ -475,56 +500,42 @@ function loop(){
     rcbar.style.background=circPct>65?'#00ff88':circPct>40?'#ffcc00':'#ff4444';
 
     // Draw on video overlay
-    const zsx=(1-zone.x1)*OW, zsy=zone.y0*OH;
-    const zsw=(zone.x1-zone.x0)*OW, zsh=(zone.y1-zone.y0)*OH;
-    const px=zsx+cx*zsw, py=zsy+cy*zsh;
+    const zsx=(1-zone.x1)*OW,zsy=zone.y0*OH;
+    const zsw=(zone.x1-zone.x0)*OW,zsh=(zone.y1-zone.y0)*OH;
+
+    // Display position (always raw, before flip, so it matches video)
+    const dpx=zsx+rawX*zsw, dpy=zsy+rawY*zsh;
     const estR=Math.max(16,Math.sqrt(best.cnt/Math.PI)*(OW/PW)*.55);
 
-    // Puck circle
-    octx.strokeStyle='#00ff88'; octx.lineWidth=3;
-    octx.beginPath(); octx.arc(px,py,estR,0,Math.PI*2); octx.stroke();
-    // Glow
-    octx.strokeStyle=`rgba(0,255,136,${.12+conf*.45})`; octx.lineWidth=6;
-    octx.beginPath(); octx.arc(px,py,estR+18,0,Math.PI*2); octx.stroke();
-    // Crosshair
+    octx.strokeStyle='#00ff88';octx.lineWidth=3;
+    octx.beginPath();octx.arc(dpx,dpy,estR,0,Math.PI*2);octx.stroke();
+    octx.strokeStyle=`rgba(0,255,136,${.12+conf*.45})`;octx.lineWidth=6;
+    octx.beginPath();octx.arc(dpx,dpy,estR+18,0,Math.PI*2);octx.stroke();
     const g=estR+5,arm=estR+32;
-    octx.strokeStyle='rgba(0,255,136,.9)'; octx.lineWidth=2;
-    [[px-arm,py,px-g,py],[px+g,py,px+arm,py],[px,py-arm,px,py-g],[px,py+g,px,py+arm]]
+    octx.strokeStyle='rgba(0,255,136,.9)';octx.lineWidth=2;
+    [[dpx-arm,dpy,dpx-g,dpy],[dpx+g,dpy,dpx+arm,dpy],[dpx,dpy-arm,dpx,dpy-g],[dpx,dpy+g,dpx,dpy+arm]]
       .forEach(([x1,y1,x2,y2])=>{octx.beginPath();octx.moveTo(x1,y1);octx.lineTo(x2,y2);octx.stroke();});
-    // Label
-    octx.fillStyle='rgba(0,0,0,.7)'; octx.fillRect(px+estR+6,py-22,130,44);
-    octx.fillStyle='#00ff88'; octx.font='bold 12px sans-serif'; octx.textAlign='left';
-    octx.fillText(`퍽 ${pct}%`,px+estR+11,py-5);
-    octx.fillStyle='#88ffcc'; octx.font='11px sans-serif';
-    octx.fillText(`원형:${circPct}%  X:${(cx*100).toFixed(0)}%`,px+estR+11,py+11);
 
-    // Draw rejected blobs (sticks etc) in red outline for awareness
-    if(dbgOn){
-      candidates.forEach(b=>{
-        if(b===best)return;
-        const bsx=(1-zone.x1)*OW+(b.cx-sx0)/zW*zsw;
-        const bsy=zone.y0*OH+(b.cy-sy0)/zH*zsh;
-        octx.strokeStyle='rgba(255,80,80,0.6)'; octx.lineWidth=1.5; octx.setLineDash([4,4]);
-        octx.beginPath(); octx.arc(bsx,bsy,8,0,Math.PI*2); octx.stroke();
-        octx.setLineDash([]);
-        octx.fillStyle='rgba(255,80,80,0.8)'; octx.font='10px sans-serif'; octx.textAlign='center';
-        octx.fillText(`${(b.circularity*100).toFixed(0)}%`,bsx,bsy+4);
-      });
-    }
+    octx.fillStyle='rgba(0,0,0,.7)';octx.fillRect(dpx+estR+6,dpy-22,138,44);
+    octx.fillStyle='#00ff88';octx.font='bold 12px sans-serif';octx.textAlign='left';
+    octx.fillText(`퍽 ${pct}%${flipX?' [반전]':''}`,dpx+estR+11,dpy-5);
+    octx.fillStyle='#88ffcc';octx.font='11px sans-serif';
+    octx.fillText(`X:${(cx*100).toFixed(0)}%  원형:${circPct}%`,dpx+estR+11,dpy+11);
 
     sendPos(cx,cy,conf);
-    noDetect=0; sdot.className='found';
-    stxt.textContent=`퍽 추적 ✓  원형:${circPct}%  신뢰:${pct}%  (${candidates.length}개 후보 중 선택)`;
+    noDetect=0;sdot.className='found';
+    stxt.textContent=`추적 ✓  X:${(cx*100).toFixed(0)}%  신뢰:${pct}%  후보:${candidates.length}개`;
+
   } else {
     noDetect++;
-    cbar.style.width='0%'; rcbar.style.width='0%';
+    cbar.style.width='0%';rcbar.style.width='0%';
     if(noDetect>8){
-      sdot.className='lost'; prevX=-1; prevY=-1;
+      sdot.className='lost'; prevBlobX=-1;prevBlobY=-1;prevBlobR=0;
       if(candidates.length===0){
-        stxt.textContent=`어두운 물체 없음 (${blobs.length}개 블롭) — 배경 재학습 or 감도 확인`;
+        stxt.textContent=`감지 없음 — "배경 재학습" 누르거나 카메라 높이 조정`;
       } else {
-        const maxCirc=Math.max(...candidates.map(b=>b.circularity));
-        stxt.textContent=`퍽 모양 불일치 (최고원형:${(maxCirc*100).toFixed(0)}%) — 카메라 각도 높이거나 배경 재학습`;
+        const mc=Math.max(...candidates.map(b=>b.circularity));
+        stxt.textContent=`원형불일치(${(mc*100).toFixed(0)}%) — 카메라 더 높이 올리세요`;
       }
     }
   }
