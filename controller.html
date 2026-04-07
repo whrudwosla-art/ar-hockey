@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ICE DASH — 퍽 추적기 v8</title>
+<title>ICE DASH — 퍽 추적기 v9</title>
 <style>
 *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
 body { background:#000; font-family:'Helvetica Neue',sans-serif; overflow:hidden; touch-action:none; width:100vw; height:100vh; }
@@ -19,67 +19,61 @@ body { background:#000; font-family:'Helvetica Neue',sans-serif; overflow:hidden
 #stxt { flex:1; color:white; font-size:12px; line-height:1.4; }
 #room-pill { background:rgba(0,204,255,0.15); border:1px solid rgba(0,204,255,0.5); border-radius:20px; padding:4px 12px; font-size:13px; font-weight:900; letter-spacing:4px; color:#00ccff; }
 
-#btm { position:fixed; bottom:0; left:0; right:0; z-index:10; background:rgba(8,25,46,0.92); padding:10px 14px; display:flex; align-items:center; gap:8px; }
-.btn { font-size:12px; font-weight:700; border:none; border-radius:8px; padding:8px 11px; cursor:pointer; white-space:nowrap; }
+#btm { position:fixed; bottom:0; left:0; right:0; z-index:10; background:rgba(8,25,46,0.92); padding:10px 14px; display:flex; align-items:center; gap:7px; }
+.btn { font-size:11px; font-weight:700; border:none; border-radius:8px; padding:8px 10px; cursor:pointer; white-space:nowrap; }
 .bY { background:#ffcc00; color:#1a1000; }
 .bR { background:rgba(255,60,60,0.25); color:#ff8888; border:1px solid rgba(255,60,60,0.3); }
 .bG { background:rgba(255,255,255,0.1); color:#aabbcc; }
 .bB { background:rgba(0,204,255,0.2); color:#00ccff; border:1px solid rgba(0,204,255,0.3); }
-#bars { flex:1; min-width:80px; display:flex; flex-direction:column; gap:3px; }
-.blbl { font-size:10px; color:#556677; letter-spacing:1px; }
+
+#bars { flex:1; min-width:60px; display:flex; flex-direction:column; gap:3px; }
+.blbl { font-size:10px; color:#556677; }
 .bbg  { background:#0a1e36; border-radius:4px; height:7px; overflow:hidden; }
 .bfill { height:100%; width:0%; border-radius:4px; transition:width .04s; }
 #cbar { background:#00ff88; }
 #rcbar { background:#00ccff; }
 
-#zone-tip { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:8; background:rgba(0,0,0,0.82); border:2px solid #ffcc00; border-radius:16px; padding:20px 28px; text-align:center; color:white; font-size:14px; line-height:2; pointer-events:none; }
-#zone-tip.hide { display:none; }
-#zone-tip big { font-size:28px; display:block; margin-bottom:4px; }
-
+/* Corner-tap guide overlay */
+#corner-guide {
+  position:fixed; inset:0; z-index:8; pointer-events:none;
+}
+/* Calibration countdown */
 #cal { position:fixed; inset:0; z-index:20; background:rgba(0,0,0,0.8); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; text-align:center; color:white; }
 #cal.hide { display:none; }
 #cal-n { font-size:80px; font-weight:900; color:#ffcc00; line-height:1; }
 #cal-msg { font-size:15px; color:#99bbcc; line-height:1.8; }
 
-/* Mirror test overlay */
-#mirror-test { position:fixed; inset:0; z-index:25; background:rgba(0,0,0,0.85); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; text-align:center; color:white; padding:30px; }
+/* Mirror test */
+#mirror-test { position:fixed; inset:0; z-index:25; background:rgba(0,0,0,0.88); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; text-align:center; color:white; padding:30px; }
 #mirror-test.hide { display:none; }
 #mirror-test h2 { font-size:20px; color:#ffcc00; }
 #mirror-test p { font-size:14px; color:#99bbcc; line-height:1.8; }
-.mirror-btns { display:flex; gap:12px; }
-.mbtn { font-size:15px; font-weight:700; padding:12px 24px; border:none; border-radius:10px; cursor:pointer; }
+.mbtn { font-size:14px; font-weight:700; padding:12px 22px; border:none; border-radius:10px; cursor:pointer; }
 
 #dbg { display:none; position:fixed; bottom:62px; left:8px; z-index:15; width:200px; height:112px; border:1.5px solid #00ccff; border-radius:6px; image-rendering:pixelated; }
 #dbg.show { display:block; }
-#dbg-txt { display:none; position:fixed; bottom:178px; left:8px; z-index:15; background:rgba(0,0,0,0.88); border-radius:6px; padding:5px 9px; font-size:10px; color:#00ccff; font-family:monospace; line-height:1.6; white-space:pre; }
+#dbg-txt { display:none; position:fixed; bottom:178px; left:8px; z-index:15; background:rgba(0,0,0,0.88); border-radius:6px; padding:5px 9px; font-size:10px; color:#00ccff; font-family:monospace; line-height:1.6; white-space:pre; max-width:220px; }
 #dbg-txt.show { display:block; }
-
-/* Direction indicator */
-#dir-arrow { position:fixed; top:50%; right:20px; transform:translateY(-50%); z-index:8; display:none; font-size:48px; opacity:0; transition:opacity .1s; pointer-events:none; }
-#dir-arrow.show { display:block; opacity:1; }
 </style>
 </head>
 <body>
 <video id="vid" autoplay playsinline muted></video>
 <canvas id="oc"></canvas>
+<canvas id="corner-guide" id="cg"></canvas>
 <canvas id="dbg"></canvas>
 <div id="dbg-txt"></div>
-<div id="dir-arrow"></div>
-
-<div id="zone-tip"><big>✋</big>흰 보드 모서리 2곳을 터치하세요<br><small style="color:#aaa;font-size:12px">터치 1 → 터치 2 (반대 모서리)</small></div>
 
 <div id="cal" class="hide">
   <div id="cal-msg"><b>퍽과 스틱을 보드에서 치워주세요</b><br>배경을 학습합니다</div>
   <div id="cal-n">3</div>
 </div>
 
-<!-- Mirror direction test -->
 <div id="mirror-test" class="hide">
-  <h2>🔄 좌우 방향 확인</h2>
-  <p>퍽을 <b>오른쪽</b>으로 움직여 보세요<br>게임 캐릭터가 어느 방향으로 움직이나요?</p>
-  <div class="mirror-btns">
+  <h2>↔ 좌우 방향 확인</h2>
+  <p>퍽을 <b>오른쪽</b>으로 움직여 보세요<br>게임 캐릭터가 어느 방향으로 가나요?</p>
+  <div style="display:flex;gap:12px">
     <button class="mbtn" style="background:#00ff88;color:#08192e" onclick="setMirror(false)">✅ 오른쪽으로 맞게 감</button>
-    <button class="mbtn" style="background:#ff6644;color:white"  onclick="setMirror(true)">❌ 반대로 가요 (반전 필요)</button>
+    <button class="mbtn" style="background:#ff6644;color:white"  onclick="setMirror(true)">❌ 반대로 가요</button>
   </div>
 </div>
 
@@ -90,15 +84,15 @@ body { background:#000; font-family:'Helvetica Neue',sans-serif; overflow:hidden
 </div>
 
 <div id="btm">
-  <button class="btn bR" onclick="resetZone()">영역 재설정</button>
-  <button class="btn bY" onclick="startCal()">📸 배경 재학습</button>
+  <button class="btn bR" onclick="resetAll()">처음부터</button>
+  <button class="btn bY" onclick="startCal()">📸 배경재학습</button>
   <div id="bars">
-    <div class="blbl">감지 신뢰도</div>
+    <div class="blbl">감지</div>
     <div class="bbg"><div class="bfill" id="cbar"></div></div>
     <div class="blbl">원형도</div>
     <div class="bbg"><div class="bfill" id="rcbar"></div></div>
   </div>
-  <button class="btn bB" onclick="showMirrorTest()">↔ 방향확인</button>
+  <button class="btn bB" onclick="showMirrorTest()">↔방향</button>
   <button class="btn bG" onclick="toggleDbg()">디버그</button>
 </div>
 
@@ -125,105 +119,193 @@ function sendPos(x, y, conf) {
   set(puckRef,{x,y,confidence:conf,ts:now}).catch(()=>{});
 }
 
-// ── Mirror / direction ──
-// false = normal (puck right → game right)
-// true  = flip   (puck right → game left)
+// ── Flip / mirror ──
 let flipX = localStorage.getItem('flipX') === 'true';
-
-window.showMirrorTest = () => {
-  document.getElementById('mirror-test').classList.remove('hide');
-};
+window.showMirrorTest = () => document.getElementById('mirror-test').classList.remove('hide');
 window.setMirror = (flip) => {
   flipX = flip;
-  localStorage.setItem('flipX', flip);
+  localStorage.setItem('flipX', String(flip));
   document.getElementById('mirror-test').classList.add('hide');
-  stxt.textContent = `방향 설정 완료 (${flip?'반전됨':'정방향'}) — 게임 플레이 가능!`;
+  stxt.textContent = `방향 설정 완료 (${flip?'반전':'정방향'}) — 플레이 시작!`;
 };
 
 // ── DOM ──
-const vid=document.getElementById('vid');
-const oc=document.getElementById('oc');
-const octx=oc.getContext('2d');
-const dbgC=document.getElementById('dbg');
-const dbgX=dbgC.getContext('2d');
-const dbgTxt=document.getElementById('dbg-txt');
-const sdot=document.getElementById('sdot');
-const stxt=document.getElementById('stxt');
-const cbar=document.getElementById('cbar');
-const rcbar=document.getElementById('rcbar');
-const dirArrow=document.getElementById('dir-arrow');
-const zoneTip=document.getElementById('zone-tip');
-const calEl=document.getElementById('cal');
-const calN=document.getElementById('cal-n');
+const vid  = document.getElementById('vid');
+const oc   = document.getElementById('oc');
+const octx = oc.getContext('2d');
+const dbgC = document.getElementById('dbg');
+const dbgX = dbgC.getContext('2d');
+const dbgTxt = document.getElementById('dbg-txt');
+const sdot = document.getElementById('sdot');
+const stxt = document.getElementById('stxt');
+const cbar = document.getElementById('cbar');
+const rcbar = document.getElementById('rcbar');
+const calEl = document.getElementById('cal');
+const calN  = document.getElementById('cal-n');
 
-// ── Proc canvas ──
+// ── Proc canvas (low-res) ──
 const PW=160, PH=90;
-const pc=document.createElement('canvas');
-const pctx=pc.getContext('2d',{willReadFrequently:true});
+const pc   = document.createElement('canvas');
+const pctx = pc.getContext('2d',{willReadFrequently:true});
 pc.width=PW; pc.height=PH;
 dbgC.width=PW; dbgC.height=PH;
 
+// ── State ──
 let running=false, dbgOn=false;
-let zone=null, zoneSet=false, tapPts=[];
 let bgData=null, bgReady=false;
 
-// Smooth position
+// ─────────────────────────────────────────────
+// PERSPECTIVE CORRECTION (Homography)
+// User taps 4 corners → we compute H matrix
+// H maps trapezoid (camera view) → rectangle (true board)
+// ─────────────────────────────────────────────
+// Corner order: 0=top-left, 1=top-right, 2=bottom-right, 3=bottom-left
+// (as seen on screen — which is the mirrored display)
+const CORNER_LABELS = ['① 왼쪽 위', '② 오른쪽 위', '③ 오른쪽 아래', '④ 왼쪽 아래'];
+const CORNER_COLORS = ['#ffcc00','#00ccff','#ff6644','#00ff88'];
+// Destination: unit square corners matching tap order
+const DST_PTS = [{x:0,y:0},{x:1,y:0},{x:1,y:1},{x:0,y:1}];
+
+let corners = [];       // tapped corners in PROC canvas coords [{x,y}, ...]
+let homoReady = false;  // homography computed
+let H = null;           // 3x3 homography (flat array, length 9)
+
+// ── Smoothing & tracking ──
 let smoothX=0.5, smoothY=0.5;
-// Previous puck center in PROC coords (for ghost erasing)
 let prevBlobX=-1, prevBlobY=-1, prevBlobR=0;
-// Previous normalized output (for direction arrow)
-let prevOutputX=0.5;
 let noDetect=0;
-let dirTimer=null;
 
-window.toggleDbg=()=>{ dbgOn=!dbgOn; dbgC.classList.toggle('show',dbgOn); dbgTxt.classList.toggle('show',dbgOn); };
-window.resetZone=()=>{
-  zone=null;zoneSet=false;tapPts=[];bgReady=false;bgData=null;
-  prevBlobX=-1;prevBlobY=-1;prevBlobR=0;
-  zoneTip.classList.remove('hide');
-  stxt.textContent='보드 모서리 2곳을 터치해서 영역 설정';
-  sdot.className='ready'; cbar.style.width='0%'; rcbar.style.width='0%';
-};
+// ── Gaussian elimination (for homography) ──
+function gaussElim(A, b) {
+  const n = b.length;
+  const M = A.map((row,i) => [...row, b[i]]);
+  for (let col=0; col<n; col++) {
+    let maxRow=col;
+    for (let r=col+1; r<n; r++) if (Math.abs(M[r][col])>Math.abs(M[maxRow][col])) maxRow=r;
+    [M[col],M[maxRow]]=[M[maxRow],M[col]];
+    for (let r=col+1; r<n; r++) {
+      if (Math.abs(M[col][col])<1e-10) continue;
+      const f=M[r][col]/M[col][col];
+      for (let k=col; k<=n; k++) M[r][k]-=f*M[col][k];
+    }
+  }
+  const x=new Array(n).fill(0);
+  for (let i=n-1; i>=0; i--) {
+    if (Math.abs(M[i][i])<1e-10) { x[i]=0; continue; }
+    x[i]=M[i][n]/M[i][i];
+    for (let k=i-1; k>=0; k--) M[k][n]-=M[k][i]*x[i];
+  }
+  return x;
+}
 
-// ── Tap zone ──
-oc.addEventListener('pointerdown',e=>{
-  if(zoneSet)return; e.preventDefault();
+// Compute homography from 4 src→dst point pairs
+function computeHomography(src, dst) {
+  const A=[], b=[];
+  for (let i=0; i<4; i++) {
+    const {x,y}=src[i], {x:u,y:v}=dst[i];
+    A.push([x,y,1,0,0,0,-u*x,-u*y]); b.push(u);
+    A.push([0,0,0,x,y,1,-v*x,-v*y]); b.push(v);
+  }
+  const h=gaussElim(A,b);
+  return [...h,1]; // h0..h7, h8=1
+}
+
+// Apply homography: (px,py) in proc coords → (u,v) normalized 0-1
+function applyH(H, px, py) {
+  const w = H[6]*px + H[7]*py + H[8];
+  if (Math.abs(w)<1e-8) return {x:0.5,y:0.5};
+  return { x:(H[0]*px+H[1]*py+H[2])/w, y:(H[3]*px+H[4]*py+H[5])/w };
+}
+
+// ── Corner tap handler ──
+oc.addEventListener('pointerdown', e=>{
+  if (homoReady) return; // already set up
+  e.preventDefault();
   const r=oc.getBoundingClientRect();
-  // NOTE: oc is CSS-mirrored (scaleX(-1)), so pointer x is already in "real world" coords
-  // We store normalized x WITHOUT flipping here — flip is applied at output only
-  const nx=1-(e.clientX-r.left)/r.width;
-  const ny=(e.clientY-r.top)/r.height;
-  tapPts.push({nx,ny}); flash(e.clientX,e.clientY,tapPts.length);
-  if(tapPts.length===1){
-    stxt.textContent='✓ 반대쪽 모서리를 터치하세요';
-  } else if(tapPts.length>=2){
-    const p1=tapPts[0],p2=tapPts[1];
-    zone={
-      x0:Math.max(0,Math.min(p1.nx,p2.nx)-0.02),
-      y0:Math.max(0,Math.min(p1.ny,p2.ny)-0.02),
-      x1:Math.min(1,Math.max(p1.nx,p2.nx)+0.02),
-      y1:Math.min(1,Math.max(p1.ny,p2.ny)+0.02),
-    };
-    zoneSet=true; zoneTip.classList.add('hide'); startCal();
+  // oc has CSS scaleX(-1). getBoundingClientRect gives visual rect.
+  // Pointer events use the visual (transformed) coordinate space.
+  // To get proc canvas coords: displayed x maps to proc x
+  // (both oc display and proc canvas are mirrored consistently)
+  const dispX = (e.clientX - r.left) / r.width;   // 0=left, 1=right in display
+  const dispY = (e.clientY - r.top)  / r.height;
+  // In proc canvas (also mirrored): same dispX
+  const procX = dispX * PW;
+  const procY = dispY * PH;
+
+  corners.push({x:procX, y:procY});
+  drawCornerGuide();
+
+  if (corners.length < 4) {
+    stxt.textContent = `${CORNER_LABELS[corners.length]} 를 터치하세요 (${corners.length}/4)`;
+  } else {
+    // All 4 corners tapped → compute homography
+    H = computeHomography(corners, DST_PTS);
+    homoReady = true;
+    drawCornerGuide();
+    stxt.textContent = '원근 보정 완료 ✓ — 배경을 학습합니다...';
+    setTimeout(startCal, 600);
   }
 });
-function flash(cx,cy,n){
-  const d=document.createElement('div');
-  d.style.cssText=`position:fixed;left:${cx-22}px;top:${cy-22}px;width:44px;height:44px;border-radius:50%;border:3px solid ${n===1?'#ffcc00':'#00ff88'};z-index:20;pointer-events:none;display:flex;align-items:center;justify-content:center;color:${n===1?'#ffcc00':'#00ff88'};font-weight:900;font-size:16px;animation:fp .6s ease-out forwards;`;
-  d.textContent=n; document.body.appendChild(d); setTimeout(()=>d.remove(),700);
+
+function drawCornerGuide() {
+  const OW=oc.width, OH=oc.height;
+  octx.clearRect(0,0,OW,OH);
+
+  if (corners.length === 0 && !homoReady) return;
+
+  // Draw tapped corners
+  corners.forEach((c, i) => {
+    // proc coords → display coords
+    const dx = (c.x/PW)*OW, dy = (c.y/PH)*OH;
+    // Draw on oc (which is CSS-mirrored, so displayed positions match)
+    octx.fillStyle = CORNER_COLORS[i];
+    octx.beginPath(); octx.arc(dx, dy, 18, 0, Math.PI*2); octx.fill();
+    octx.fillStyle = '#000'; octx.font='bold 14px sans-serif'; octx.textAlign='center';
+    octx.fillText(i+1, dx, dy+5);
+  });
+
+  // If all 4 tapped, draw the quad outline
+  if (corners.length === 4 && homoReady) {
+    octx.strokeStyle='rgba(0,255,136,0.7)'; octx.lineWidth=2.5; octx.setLineDash([8,5]);
+    octx.beginPath();
+    corners.forEach((c,i) => {
+      const dx=(c.x/PW)*OW, dy=(c.y/PH)*OH;
+      i===0 ? octx.moveTo(dx,dy) : octx.lineTo(dx,dy);
+    });
+    octx.closePath(); octx.stroke(); octx.setLineDash([]);
+  }
+
+  // Next corner prompt
+  if (corners.length < 4) {
+    const idx = corners.length;
+    // Show pulsing indicator text at expected position
+    octx.fillStyle = CORNER_COLORS[idx];
+    octx.font = 'bold 16px sans-serif'; octx.textAlign = 'center';
+    octx.fillText(`${CORNER_LABELS[idx]} 를 터치`, OW/2, OH/2);
+  }
 }
-const st=document.createElement('style');
-st.textContent='@keyframes fp{0%{transform:scale(.4);opacity:1}100%{transform:scale(2.2);opacity:0}}';
-document.head.appendChild(st);
+
+// ── Reset ──
+window.resetAll = () => {
+  corners=[]; homoReady=false; H=null;
+  bgReady=false; bgData=null;
+  prevBlobX=-1; prevBlobY=-1; prevBlobR=0;
+  smoothX=0.5; smoothY=0.5; noDetect=0;
+  octx.clearRect(0,0,oc.width,oc.height);
+  cbar.style.width='0%'; rcbar.style.width='0%';
+  sdot.className='ready';
+  stxt.textContent='① 왼쪽 위 를 터치하세요 (0/4)';
+};
 
 // ── Calibration ──
-window.startCal=()=>{
-  if(!zoneSet){stxt.textContent='먼저 영역을 설정하세요';return;}
+window.startCal = () => {
+  if (!homoReady) { stxt.textContent='먼저 모서리 4곳을 설정하세요'; return; }
   bgReady=false; prevBlobX=-1; prevBlobY=-1;
   calEl.classList.remove('hide');
   let c=3; calN.textContent=c;
   const iv=setInterval(()=>{ c--; calN.textContent=c; if(c<=0){clearInterval(iv);captureBg();} },1000);
 };
+
 function captureBg(){
   const frames=[]; let n=0;
   function grab(){
@@ -241,11 +323,90 @@ function captureBg(){
       bgReady=true; calEl.classList.add('hide');
       stxt.textContent='배경 학습 완료 ✓ — 퍽을 올리고 스틱으로 움직여 보세요!';
       sdot.className='ready';
-      // Show mirror test after calibration
-      setTimeout(()=>{ if(zoneSet&&bgReady) showMirrorTest(); }, 800);
+      setTimeout(()=>{ document.getElementById('mirror-test').classList.remove('hide'); },800);
     }
   }
   grab();
+}
+
+// ── Ghost eraser ──
+function eraseGhost(bx, by, br, d){
+  const r=Math.ceil(br*1.6), r2=r*r;
+  const ex0=Math.max(0,Math.floor(bx-r)), ey0=Math.max(0,Math.floor(by-r));
+  const ex1=Math.min(PW,Math.ceil(bx+r)),  ey1=Math.min(PH,Math.ceil(by+r));
+  for(let y=ey0;y<ey1;y++){
+    for(let x=ex0;x<ex1;x++){
+      if((x-bx)**2+(y-by)**2>r2)continue;
+      const i=y*PW+x, idx=i*4;
+      const lum=d[idx]*.299+d[idx+1]*.587+d[idx+2]*.114;
+      bgData[i]=bgData[i]*.45+lum*.55; // aggressive 55% update
+    }
+  }
+}
+
+// ── Connected components ──
+function findBlobs(mask,w,h,x0,y0,x1,y1){
+  const labels=new Int32Array(w*h);
+  const parent=[];
+  function find(x){while(parent[x]!==x){parent[x]=parent[parent[x]];x=parent[x];}return x;}
+  function union(a,b){a=find(a);b=find(b);if(a!==b)parent[a]=b;}
+  let next=1;
+  for(let y=y0;y<y1;y++){
+    for(let x=x0;x<x1;x++){
+      const i=y*w+x; if(!mask[i])continue;
+      const top=y>y0?labels[(y-1)*w+x]:0, left=x>x0?labels[y*w+(x-1)]:0;
+      if(!top&&!left){labels[i]=next;parent.push(next);next++;}
+      else if(top&&!left){labels[i]=top;}
+      else if(!top&&left){labels[i]=left;}
+      else{labels[i]=Math.min(top,left);if(top!==left)union(top,left);}
+    }
+  }
+  const blobs=new Map();
+  for(let y=y0;y<y1;y++){
+    for(let x=x0;x<x1;x++){
+      const i=y*w+x; if(!labels[i])continue;
+      const root=find(labels[i]); labels[i]=root;
+      if(!blobs.has(root))blobs.set(root,{sumX:0,sumY:0,cnt:0,minX:w,maxX:0,minY:h,maxY:0});
+      const b=blobs.get(root);
+      b.sumX+=x;b.sumY+=y;b.cnt++;
+      if(x<b.minX)b.minX=x;if(x>b.maxX)b.maxX=x;
+      if(y<b.minY)b.minY=y;if(y>b.maxY)b.maxY=y;
+    }
+  }
+  return Array.from(blobs.values()).map(b=>{
+    const bW=b.maxX-b.minX+1, bH=b.maxY-b.minY+1;
+    const asp=Math.min(bW,bH)/Math.max(bW,bH);
+    const fill=b.cnt/(bW*bH);
+    return {cx:b.sumX/b.cnt,cy:b.sumY/b.cnt,cnt:b.cnt,bW,bH,
+            circularity:asp*.5+Math.min(1,fill/.785)*.5,
+            minX:b.minX,maxX:b.maxX,minY:b.minY,maxY:b.maxY};
+  });
+}
+
+// ── Bounding box of homography quad (for search region) ──
+function getQuadBounds(){
+  if(!homoReady||corners.length<4) return {x0:0,y0:0,x1:PW,y1:PH};
+  let x0=PW,y0=PH,x1=0,y1=0;
+  corners.forEach(c=>{
+    if(c.x<x0)x0=c.x;if(c.x>x1)x1=c.x;
+    if(c.y<y0)y0=c.y;if(c.y>y1)y1=c.y;
+  });
+  return {x0:Math.max(0,Math.floor(x0-2)),y0:Math.max(0,Math.floor(y0-2)),
+          x1:Math.min(PW,Math.ceil(x1+2)),y1:Math.min(PH,Math.ceil(y1+2))};
+}
+
+// Check if a proc-canvas point is inside the tapped quad
+// Using cross-product winding
+function insideQuad(px, py){
+  if(!homoReady||corners.length<4) return true;
+  const pts=corners;
+  let inside=true;
+  for(let i=0;i<4;i++){
+    const a=pts[i], b=pts[(i+1)%4];
+    const cross=(b.x-a.x)*(py-a.y)-(b.y-a.y)*(px-a.x);
+    if(cross<0){inside=false;break;}
+  }
+  return inside;
 }
 
 // ── Camera ──
@@ -258,97 +419,28 @@ function captureBg(){
     function resize(){oc.width=window.innerWidth;oc.height=window.innerHeight;}
     resize(); window.addEventListener('resize',resize);
     sdot.className='ready';
-    stxt.textContent='보드 모서리 2곳을 터치해서 영역 설정';
+    stxt.textContent='① 왼쪽 위 를 터치하세요 (0/4)';
     running=true; requestAnimationFrame(loop);
   }catch(e){stxt.textContent='카메라 오류: '+e.message;sdot.className='lost';}
 })();
 
-// ── Connected components (fast 2-pass) ──
-function findBlobs(mask,w,h,x0,y0,x1,y1){
-  const labels=new Int32Array(w*h);
-  const parent=[];
-  function find(x){while(parent[x]!==x){parent[x]=parent[parent[x]];x=parent[x];}return x;}
-  function union(a,b){a=find(a);b=find(b);if(a!==b)parent[a]=b;}
-  let next=1;
-  for(let y=y0;y<y1;y++){
-    for(let x=x0;x<x1;x++){
-      const i=y*w+x;
-      if(!mask[i])continue;
-      const top=y>y0?labels[(y-1)*w+x]:0;
-      const left=x>x0?labels[y*w+(x-1)]:0;
-      if(!top&&!left){labels[i]=next;parent.push(next);next++;}
-      else if(top&&!left){labels[i]=top;}
-      else if(!top&&left){labels[i]=left;}
-      else{labels[i]=Math.min(top,left);if(top!==left)union(top,left);}
-    }
-  }
-  const blobs=new Map();
-  for(let y=y0;y<y1;y++){
-    for(let x=x0;x<x1;x++){
-      const i=y*w+x;
-      if(!labels[i])continue;
-      const root=find(labels[i]); labels[i]=root;
-      if(!blobs.has(root))blobs.set(root,{sumX:0,sumY:0,cnt:0,minX:w,maxX:0,minY:h,maxY:0});
-      const b=blobs.get(root);
-      b.sumX+=x;b.sumY+=y;b.cnt++;
-      if(x<b.minX)b.minX=x;if(x>b.maxX)b.maxX=x;
-      if(y<b.minY)b.minY=y;if(y>b.maxY)b.maxY=y;
-    }
-  }
-  return Array.from(blobs.values()).map(b=>{
-    const bW=b.maxX-b.minX+1,bH=b.maxY-b.minY+1;
-    const asp=Math.min(bW,bH)/Math.max(bW,bH);
-    const fill=b.cnt/(bW*bH);
-    const circularity=asp*.5+Math.min(1,fill/.785)*.5;
-    return {cx:b.sumX/b.cnt,cy:b.sumY/b.cnt,cnt:b.cnt,bW,bH,circularity,
-            minX:b.minX,maxX:b.maxX,minY:b.minY,maxY:b.maxY};
-  });
-}
-
-// ── Ghost eraser ──
-// When puck moves, aggressively update bg at OLD position
-// so it stops being detected there
-function eraseGhost(blobX, blobY, blobR, d){
-  // Erase circle around previous blob center
-  const r=Math.ceil(blobR*1.5);
-  const ex0=Math.max(0,Math.floor(blobX-r));
-  const ey0=Math.max(0,Math.floor(blobY-r));
-  const ex1=Math.min(PW,Math.ceil(blobX+r));
-  const ey1=Math.min(PH,Math.ceil(blobY+r));
-  const r2=r*r;
-  for(let y=ey0;y<ey1;y++){
-    for(let x=ex0;x<ex1;x++){
-      const dx=x-blobX, dy=y-blobY;
-      if(dx*dx+dy*dy>r2) continue;
-      const i=y*PW+x, idx=i*4;
-      const lum=d[idx]*.299+d[idx+1]*.587+d[idx+2]*.114;
-      // Aggressive: blend 50% toward current frame at old position
-      bgData[i]=bgData[i]*.50+lum*.50;
-    }
-  }
-}
+window.toggleDbg=()=>{dbgOn=!dbgOn;dbgC.classList.toggle('show',dbgOn);dbgTxt.classList.toggle('show',dbgOn);};
 
 // ── Main detection loop ──
 function loop(){
   if(!running||vid.readyState<2){requestAnimationFrame(loop);return;}
 
-  const OW=oc.width,OH=oc.height;
-  octx.clearRect(0,0,OW,OH);
+  const OW=oc.width, OH=oc.height;
 
-  if(zoneSet&&zone){
-    const zsx=(1-zone.x1)*OW,zsy=zone.y0*OH;
-    const zsw=(zone.x1-zone.x0)*OW,zsh=(zone.y1-zone.y0)*OH;
-    octx.strokeStyle='rgba(255,204,0,0.45)';octx.lineWidth=2;octx.setLineDash([10,6]);
-    octx.strokeRect(zsx,zsy,zsw,zsh);octx.setLineDash([]);
-  }
-  if(tapPts.length===1&&!zoneSet){
-    const p=tapPts[0],tx=(1-p.nx)*OW,ty=p.ny*OH;
-    octx.strokeStyle='#ffcc00';octx.lineWidth=3;
-    octx.beginPath();octx.arc(tx,ty,16,0,Math.PI*2);octx.stroke();
-    octx.fillStyle='#ffcc00';octx.font='bold 14px sans-serif';octx.textAlign='center';octx.fillText('1',tx,ty+5);
+  // Only clear overlay when needed (not every frame to preserve corner markers)
+  if(homoReady&&bgReady) octx.clearRect(0,0,OW,OH);
+
+  // Redraw corner quad outline continuously
+  if(homoReady){
+    drawCornerGuide();
   }
 
-  if(!zoneSet||!zone||!bgReady){requestAnimationFrame(loop);return;}
+  if(!homoReady||!bgReady){requestAnimationFrame(loop);return;}
 
   // Draw mirrored frame to proc canvas
   pctx.save(); pctx.translate(PW,0); pctx.scale(-1,1);
@@ -356,17 +448,16 @@ function loop(){
   const id=pctx.getImageData(0,0,PW,PH);
   const d=id.data;
 
-  const sx0=Math.max(0,Math.floor(zone.x0*PW));
-  const sy0=Math.max(0,Math.floor(zone.y0*PH));
-  const sx1=Math.min(PW,Math.ceil(zone.x1*PW));
-  const sy1=Math.min(PH,Math.ceil(zone.y1*PH));
-  const zW=sx1-sx0, zH=sy1-sy0;
+  // Search region = bounding box of tapped quad
+  const bounds=getQuadBounds();
+  const {x0:sx0,y0:sy0,x1:sx1,y1:sy1}=bounds;
 
-  // Background subtraction
+  // Background subtraction (only inside quad)
   let maxDiff=0;
   const diff=new Float32Array(PW*PH);
   for(let y=sy0;y<sy1;y++){
     for(let x=sx0;x<sx1;x++){
+      if(!insideQuad(x,y))continue;
       const i=y*PW+x, idx=i*4;
       const lum=d[idx]*.299+d[idx+1]*.587+d[idx+2]*.114;
       const sat=Math.max(d[idx],d[idx+1],d[idx+2])-Math.min(d[idx],d[idx+1],d[idx+2]);
@@ -380,16 +471,15 @@ function loop(){
   const mask=new Uint8Array(PW*PH);
   for(let y=sy0;y<sy1;y++){
     for(let x=sx0;x<sx1;x++){
-      const i=y*PW+x;
-      if(diff[i]>=thresh)mask[i]=1;
+      if(insideQuad(x,y)&&diff[y*PW+x]>=thresh) mask[y*PW+x]=1;
     }
   }
 
-  // Slow background drift for non-puck pixels
+  // Background slow drift
   for(let y=sy0;y<sy1;y++){
     for(let x=sx0;x<sx1;x++){
       const i=y*PW+x;
-      if(!mask[i]){
+      if(!mask[i]&&insideQuad(x,y)){
         const idx=i*4;
         const lum=d[idx]*.299+d[idx+1]*.587+d[idx+2]*.114;
         bgData[i]=bgData[i]*.994+lum*.006;
@@ -397,14 +487,13 @@ function loop(){
     }
   }
 
-  // Connected components
-  const zArea=zW*zH;
+  // Connected components & blob selection
+  const zArea=(sx1-sx0)*(sy1-sy0);
   const minPx=Math.max(2,Math.floor(zArea*.0008));
   const maxPx=Math.floor(zArea*.12);
   const blobs=findBlobs(mask,PW,PH,sx0,sy0,sx1,sy1);
   const candidates=blobs.filter(b=>b.cnt>=minPx&&b.cnt<=maxPx);
 
-  // Pick best (most circular + closest to previous position)
   const hasPrev=prevBlobX>=0&&prevBlobY>=0;
   let best=null, bestScore=-1;
   candidates.forEach(b=>{
@@ -412,7 +501,7 @@ function loop(){
     let proxScore=0.5;
     if(hasPrev){
       const dist=Math.sqrt((b.cx-prevBlobX)**2+(b.cy-prevBlobY)**2);
-      proxScore=Math.max(0,1-dist/(Math.max(zW,zH)*.5));
+      proxScore=Math.max(0,1-dist/(Math.max(sx1-sx0,sy1-sy0)*.5));
     }
     const idealPx=Math.min(maxPx,Math.max(minPx,zArea*.003));
     const sizeScore=Math.max(0,1-Math.abs(b.cnt-idealPx)/idealPx);
@@ -425,10 +514,10 @@ function loop(){
     const di=dbgX.createImageData(PW,PH);
     for(let p=0;p<PW*PH;p++){
       const x=p%PW,y=Math.floor(p/PW);
-      const inZ=x>=sx0&&x<sx1&&y>=sy0&&y<sy1;
+      const inQ=insideQuad(x,y);
       const heat=Math.min(255,(diff[p]/Math.max(1,maxDiff))*255);
       let r=0,g=0,b2=0;
-      if(!inZ){r=8;g=8;b2=8;}
+      if(!inQ){r=8;g=8;b2=8;}
       else if(mask[p]){r=180;g=60;b2=20;}
       else{r=Math.floor(heat*.3);g=0;b2=20;}
       di.data[p*4]=r;di.data[p*4+1]=g;di.data[p*4+2]=b2;di.data[p*4+3]=255;
@@ -441,105 +530,102 @@ function loop(){
       }
     }
     dbgX.putImageData(di,0,0);
-    dbgX.strokeStyle='#ffcc00';dbgX.lineWidth=1;dbgX.strokeRect(sx0,sy0,zW,zH);
-    if(best){dbgX.strokeStyle='#00ff88';dbgX.lineWidth=1;dbgX.strokeRect(best.minX,best.minY,best.bW,best.bH);}
+    // Draw quad corners on debug
+    dbgX.strokeStyle='#ffcc00';dbgX.lineWidth=1;
+    if(corners.length===4){
+      dbgX.beginPath();
+      corners.forEach((c,i)=>i===0?dbgX.moveTo(c.x,c.y):dbgX.lineTo(c.x,c.y));
+      dbgX.closePath();dbgX.stroke();
+    }
     dbgTxt.textContent=
-      `블롭:${blobs.length} 후보:${candidates.length} thr:${thresh.toFixed(0)}\n`+
-      `maxDiff:${maxDiff.toFixed(0)} flipX:${flipX}\n`+
-      (best?`best circ:${(best.circularity*100).toFixed(0)}% px:${best.cnt}`:'best:없음');
+      `blobs:${blobs.length} cand:${candidates.length}\n`+
+      `thr:${thresh.toFixed(0)} maxD:${maxDiff.toFixed(0)}\n`+
+      `flipX:${flipX} homo:${homoReady}\n`+
+      (best?`circ:${(best.circularity*100).toFixed(0)}% px:${best.cnt}`:'best:없음');
   }
 
   if(best){
-    // ── GHOST ERASE: force-update background at PREVIOUS position ──
-    // This is the KEY fix: when puck moves, old position stops being detected
+    // Ghost erase at previous position
     if(hasPrev){
       const moved=Math.sqrt((best.cx-prevBlobX)**2+(best.cy-prevBlobY)**2);
-      if(moved>1.5){ // puck actually moved
-        eraseGhost(prevBlobX,prevBlobY,prevBlobR,d);
-      }
+      if(moved>1.5) eraseGhost(prevBlobX,prevBlobY,prevBlobR,d);
     }
 
-    // Raw normalized position within zone (0=left, 1=right in camera coords)
-    const rawX=(best.cx-sx0)/zW;
-    const rawY=(best.cy-sy0)/zH;
+    // ── PERSPECTIVE CORRECTION ──
+    // Apply homography: proc canvas coords → normalized board coords
+    const corrected = applyH(H, best.cx, best.cy);
 
-    // Apply flip if needed
-    // rawX: 0=left side of camera, 1=right side of camera
-    // Since video is mirrored for display, rawX is already in "real world" coords
-    // flipX=true means user said it was going the wrong way → invert
-    const outX = flipX ? (1-rawX) : rawX;
-    const outY = rawY;
+    // Clamp to [0,1]
+    let cx = Math.max(0, Math.min(1, corrected.x));
+    let cy = Math.max(0, Math.min(1, corrected.y));
 
-    // High alpha = very fast response
-    smoothX=smoothX*.25+outX*.75;
-    smoothY=smoothY*.25+outY*.75;
-    const cx=Math.max(0,Math.min(1,smoothX));
-    const cy=Math.max(0,Math.min(1,smoothY));
+    // Apply flip if direction is wrong
+    if(flipX) cx = 1 - cx;
 
-    // Direction arrow
-    const dx=cx-prevOutputX;
-    if(Math.abs(dx)>0.01){
-      dirArrow.textContent=dx>0?'→':'←';
-      dirArrow.classList.add('show');
-      clearTimeout(dirTimer);
-      dirTimer=setTimeout(()=>dirArrow.classList.remove('show'),400);
-    }
-    prevOutputX=cx;
+    // High-alpha smooth for fast response
+    smoothX = smoothX*.25 + cx*.75;
+    smoothY = smoothY*.25 + cy*.75;
+    const outX = Math.max(0,Math.min(1,smoothX));
+    const outY = Math.max(0,Math.min(1,smoothY));
 
-    // Update blob tracking
     prevBlobX=best.cx; prevBlobY=best.cy;
     prevBlobR=Math.sqrt(best.cnt/Math.PI);
 
     const conf=best.circularity*.65+Math.min(1,bestScore)*.35;
     const pct=Math.round(conf*100);
     const circPct=Math.round(best.circularity*100);
-
     cbar.style.width=pct+'%';
     cbar.style.background=pct>55?'#00ff88':pct>30?'#ffcc00':'#ff4444';
     rcbar.style.width=circPct+'%';
     rcbar.style.background=circPct>65?'#00ff88':circPct>40?'#ffcc00':'#ff4444';
 
-    // Draw on video overlay
-    const zsx=(1-zone.x1)*OW,zsy=zone.y0*OH;
-    const zsw=(zone.x1-zone.x0)*OW,zsh=(zone.y1-zone.y0)*OH;
-
-    // Display position (always raw, before flip, so it matches video)
-    const dpx=zsx+rawX*zsw, dpy=zsy+rawY*zsh;
+    // Draw puck indicator on video overlay (in display/raw proc coords)
+    const rawDispX=(best.cx/PW)*OW, rawDispY=(best.cy/PH)*OH;
     const estR=Math.max(16,Math.sqrt(best.cnt/Math.PI)*(OW/PW)*.55);
 
-    octx.strokeStyle='#00ff88';octx.lineWidth=3;
-    octx.beginPath();octx.arc(dpx,dpy,estR,0,Math.PI*2);octx.stroke();
-    octx.strokeStyle=`rgba(0,255,136,${.12+conf*.45})`;octx.lineWidth=6;
-    octx.beginPath();octx.arc(dpx,dpy,estR+18,0,Math.PI*2);octx.stroke();
+    octx.strokeStyle='#00ff88'; octx.lineWidth=3;
+    octx.beginPath(); octx.arc(rawDispX,rawDispY,estR,0,Math.PI*2); octx.stroke();
+    octx.strokeStyle=`rgba(0,255,136,${.12+conf*.45})`; octx.lineWidth=6;
+    octx.beginPath(); octx.arc(rawDispX,rawDispY,estR+18,0,Math.PI*2); octx.stroke();
     const g=estR+5,arm=estR+32;
-    octx.strokeStyle='rgba(0,255,136,.9)';octx.lineWidth=2;
-    [[dpx-arm,dpy,dpx-g,dpy],[dpx+g,dpy,dpx+arm,dpy],[dpx,dpy-arm,dpx,dpy-g],[dpx,dpy+g,dpx,dpy+arm]]
+    octx.strokeStyle='rgba(0,255,136,.9)'; octx.lineWidth=2;
+    [[rawDispX-arm,rawDispY,rawDispX-g,rawDispY],[rawDispX+g,rawDispY,rawDispX+arm,rawDispY],
+     [rawDispX,rawDispY-arm,rawDispX,rawDispY-g],[rawDispX,rawDispY+g,rawDispX,rawDispY+arm]]
       .forEach(([x1,y1,x2,y2])=>{octx.beginPath();octx.moveTo(x1,y1);octx.lineTo(x2,y2);octx.stroke();});
 
-    octx.fillStyle='rgba(0,0,0,.7)';octx.fillRect(dpx+estR+6,dpy-22,138,44);
-    octx.fillStyle='#00ff88';octx.font='bold 12px sans-serif';octx.textAlign='left';
-    octx.fillText(`퍽 ${pct}%${flipX?' [반전]':''}`,dpx+estR+11,dpy-5);
-    octx.fillStyle='#88ffcc';octx.font='11px sans-serif';
-    octx.fillText(`X:${(cx*100).toFixed(0)}%  원형:${circPct}%`,dpx+estR+11,dpy+11);
+    // Show corrected position
+    octx.fillStyle='rgba(0,0,0,.72)'; octx.fillRect(rawDispX+estR+6,rawDispY-24,148,48);
+    octx.fillStyle='#00ff88'; octx.font='bold 12px sans-serif'; octx.textAlign='left';
+    octx.fillText(`퍽 ${pct}%${flipX?' [반전]':''}`,rawDispX+estR+11,rawDispY-7);
+    octx.fillStyle='#88ffcc'; octx.font='11px sans-serif';
+    octx.fillText(`보정X:${(outX*100).toFixed(0)}%  원형:${circPct}%`,rawDispX+estR+11,rawDispY+10);
 
-    sendPos(cx,cy,conf);
-    noDetect=0;sdot.className='found';
-    stxt.textContent=`추적 ✓  X:${(cx*100).toFixed(0)}%  신뢰:${pct}%  후보:${candidates.length}개`;
+    // Also show where the corrected position maps to on the quad
+    // Inverse: find display point for corrected (outX, outY)
+    // Bilinear interpolation on the 4 corners
+    const c0=corners[0],c1=corners[1],c2=corners[2],c3=corners[3];
+    const interpX=(c0.x*(1-outX)*(1-outY)+c1.x*outX*(1-outY)+c2.x*outX*outY+c3.x*(1-outX)*outY);
+    const interpY=(c0.y*(1-outX)*(1-outY)+c1.y*outX*(1-outY)+c2.y*outX*outY+c3.y*(1-outX)*outY);
+    const corrDispX=(interpX/PW)*OW, corrDispY=(interpY/PH)*OH;
+    octx.strokeStyle='rgba(255,204,0,0.7)'; octx.lineWidth=2; octx.setLineDash([4,4]);
+    octx.beginPath(); octx.arc(corrDispX,corrDispY,8,0,Math.PI*2); octx.stroke();
+    octx.setLineDash([]);
+
+    sendPos(outX, outY, conf);
+    noDetect=0; sdot.className='found';
+    stxt.textContent=`추적 ✓  보정X:${(outX*100).toFixed(0)}%  신뢰:${pct}%  원형:${circPct}%`;
 
   } else {
     noDetect++;
-    cbar.style.width='0%';rcbar.style.width='0%';
+    cbar.style.width='0%'; rcbar.style.width='0%';
     if(noDetect>8){
-      sdot.className='lost'; prevBlobX=-1;prevBlobY=-1;prevBlobR=0;
-      if(candidates.length===0){
-        stxt.textContent=`감지 없음 — "배경 재학습" 누르거나 카메라 높이 조정`;
-      } else {
-        const mc=Math.max(...candidates.map(b=>b.circularity));
-        stxt.textContent=`원형불일치(${(mc*100).toFixed(0)}%) — 카메라 더 높이 올리세요`;
-      }
+      sdot.className='lost'; prevBlobX=-1; prevBlobY=-1; prevBlobR=0;
+      const msg=candidates.length===0
+        ?`감지없음(${blobs.length}블롭) — 배경재학습`
+        :`원형불일치(${(Math.max(...candidates.map(b=>b.circularity))*100).toFixed(0)}%) — 카메라 높이↑`;
+      stxt.textContent=msg;
     }
   }
-
   requestAnimationFrame(loop);
 }
 </script>
